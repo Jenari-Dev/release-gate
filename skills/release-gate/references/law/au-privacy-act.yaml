@@ -1,0 +1,119 @@
+# Privacy Act 1988 (Australia) and the Australian Privacy Principles. Curated by release-gate from official sources only.
+# Thresholds and rules change. Verify against the official source before relying on this.
+id: au-privacy-act
+name: "Privacy Act 1988 (Cth) and the Australian Privacy Principles (APPs)"
+short_name: Australian Privacy Act
+jurisdiction: Australia
+source_url: "https://www.legislation.gov.au/C2004A03712/latest/text"
+last_verified: 2026-10-18
+applicability:
+  triggers:
+    - id: organisation-over-3m-turnover
+      description: "A private sector organisation with annual turnover of more than AUD 3 million is regulated by the Privacy Act, as are Australian Government agencies. The OAIC page says the Act also covers some other organisations without listing them. Together these are APP entities."
+      config_predicate: {jurisdictions_any: [australia]}
+      source_url: "https://www.oaic.gov.au/privacy/privacy-legislation/the-privacy-act"
+      source_ref: "OAIC: The Privacy Act"
+    - id: children-online-service
+      description: "APP entities providing a social media service, relevant electronic service or designated internet service that is likely to be accessed by children or primarily concerns children's activities will be bound by the Children's Online Privacy Code once registered (health service providers excluded)."
+      config_predicate: {jurisdictions_any: [australia], features_any: [accounts, ugc, messaging]}
+      source_url: "https://www.oaic.gov.au/privacy/privacy-registers/privacy-codes/childrens-online-privacy-code"
+      source_ref: "OAIC: Children's Online Privacy Code"
+  notes: "The Federal Register of Legislation page for the Act (latest compilation C2026C00227, compiled 4 Jun 2026) was reachable only as a table of contents; operative text for sections was taken from OAIC guidance pages that cite section numbers. Whether the Act applies to overseas businesses (s 5B) was not confirmed from an official page this session."
+obligations:
+  - id: app1-open-management
+    summary: "APP 1: manage personal information openly and transparently, including keeping a clear, current privacy policy."
+    check: "A privacy policy exists and matches data-inventory.yaml."
+    inventory_keys: [fields.purpose, fields.recipients]
+    source_url: "https://www.oaic.gov.au/privacy/australian-privacy-principles/australian-privacy-principles-quick-reference"
+    source_ref: "APP 1"
+  - id: app3-collection
+    summary: "APP 3: sets when personal information may be collected, with higher standards for sensitive information."
+    check: "Each collected field is reasonably necessary for the stated function; sensitive fields are justified and have consent."
+    inventory_keys: [fields.category, fields.required, fields.purpose]
+    source_url: "https://www.oaic.gov.au/privacy/australian-privacy-principles/australian-privacy-principles-quick-reference"
+    source_ref: "APP 3"
+  - id: app5-collection-notice
+    summary: "APP 5: entities that collect personal information must tell individuals certain matters about the collection."
+    check: "A collection notice is shown at signup or collection points."
+    source_url: "https://www.oaic.gov.au/privacy/australian-privacy-principles/australian-privacy-principles-quick-reference"
+    source_ref: "APP 5"
+  - id: app6-use-disclosure
+    summary: "APP 6: limits when held personal information can be used or disclosed."
+    check: "Secondary uses (analytics, marketing, sharing) are compatible with the purpose or have consent."
+    inventory_keys: [fields.purpose, fields.shared_with]
+    source_url: "https://www.oaic.gov.au/privacy/australian-privacy-principles/australian-privacy-principles-quick-reference"
+    source_ref: "APP 6"
+  - id: app7-direct-marketing
+    summary: "APP 7: personal information may be used or disclosed for direct marketing only if specific conditions are met."
+    check: "Marketing emails and messages have a documented basis and an opt-out."
+    inventory_keys: [fields.marketing_consent]
+    source_url: "https://www.oaic.gov.au/privacy/australian-privacy-principles/australian-privacy-principles-quick-reference"
+    source_ref: "APP 7"
+  - id: app8-cross-border
+    summary: "APP 8: take steps to protect personal information before it is disclosed overseas."
+    check: "Every overseas recipient or processor in the inventory has a contractual or other protection recorded."
+    inventory_keys: [fields.recipients, fields.transfers]
+    source_url: "https://www.oaic.gov.au/privacy/australian-privacy-principles/australian-privacy-principles-quick-reference"
+    source_ref: "APP 8"
+  - id: app11-security
+    summary: "APP 11: protect held personal information from misuse, loss and unauthorised access, and destroy or de-identify it in certain cases once no longer needed."
+    check: "Security phase findings show no open critical gaps; retention and destruction are defined per field."
+    inventory_keys: [fields.retention]
+    source_url: "https://www.oaic.gov.au/privacy/australian-privacy-principles/australian-privacy-principles-quick-reference"
+    source_ref: "APP 11"
+breach_notification:
+  - id: assess-suspected-breach
+    summary: "An entity that suspects an eligible data breach must take all reasonable steps to complete its assessment within 30 calendar days of becoming aware of the grounds for suspicion. The OAIC treats 30 days as a maximum and expects it to be much shorter. An eligible data breach needs: unauthorised access to, unauthorised disclosure of, or loss of personal information the entity holds; likely to result in serious harm to one or more individuals ('likely' means more probable than not); and remedial action has not prevented that likely harm."
+    deadline: "30 calendar days to complete the assessment (s 26WH(2))"
+    source_url: "https://www.oaic.gov.au/privacy/notifiable-data-breaches/preventing-preparing-for-and-responding-to-data-breaches/data-breach-preparation-and-response/part-4-notifiable-data-breach-ndb-scheme"
+    source_ref: "Privacy Act s 26WE, 26WH(2)"
+  - id: notify-commissioner
+    summary: "If there are reasonable grounds to believe an eligible data breach occurred, give the Commissioner a statement. The notification form asks for the entity's name and contact details, a description of the breach, the kinds of information involved, and recommendations about steps individuals should take."
+    deadline: "as soon as practicable after becoming aware of the eligible breach (s 26WK(2))"
+    source_url: "https://www.oaic.gov.au/privacy/notifiable-data-breaches/preventing-preparing-for-and-responding-to-data-breaches/data-breach-preparation-and-response/part-4-notifiable-data-breach-ndb-scheme"
+    source_ref: "Privacy Act s 26WK(2); content list at https://www.oaic.gov.au/privacy/notifiable-data-breaches/report-a-data-breach"
+  - id: notify-individuals
+    summary: "Notify affected individuals: either all individuals whose information was involved, or only those at likely risk of serious harm; if neither is practicable, publish the statement on the entity's website and take reasonable steps to publicise it (the OAIC generally expects it to remain available for at least 6 months)."
+    deadline: "as soon as practicable after the Commissioner statement is completed (s 26WL(3))"
+    source_url: "https://www.oaic.gov.au/privacy/notifiable-data-breaches/preventing-preparing-for-and-responding-to-data-breaches/data-breach-preparation-and-response/part-4-notifiable-data-breach-ndb-scheme"
+    source_ref: "Privacy Act s 26WL(2), 26WL(3)"
+user_rights:
+  - id: app12-access
+    summary: "APP 12: individuals can request access to their personal information and the entity must provide it unless an exception applies."
+    source_url: "https://www.oaic.gov.au/privacy/australian-privacy-principles/australian-privacy-principles-quick-reference"
+    source_ref: "APP 12"
+  - id: app13-correction
+    summary: "APP 13: entities must address correcting the personal information they hold about individuals."
+    source_url: "https://www.oaic.gov.au/privacy/australian-privacy-principles/australian-privacy-principles-quick-reference"
+    source_ref: "APP 13"
+  - id: app2-anonymity
+    summary: "APP 2: individuals can generally deal with an entity anonymously or by pseudonym, subject to limited exceptions."
+    source_url: "https://www.oaic.gov.au/privacy/australian-privacy-principles/australian-privacy-principles-quick-reference"
+    source_ref: "APP 2"
+consent:
+  - id: sensitive-information-standard
+    summary: "APP 3 sets higher standards for collecting sensitive information (the consent detail was not read this session)."
+    source_url: "https://www.oaic.gov.au/privacy/australian-privacy-principles/australian-privacy-principles-quick-reference"
+    source_ref: "APP 3"
+children:
+  - id: childrens-online-privacy-code
+    summary: "The OAIC must have the Children's Online Privacy Code finalised and registered by 10 December 2026. The Exposure Draft consultation ran from 31 March 2026 to 5 June 2026. The OAIC says the Code sets out how covered online services must comply with the APPs and adds requirements for handling children's personal information; breach is treated as an interference with privacy and falls under the Act's penalty framework. The commencement date is not stated on the page read."
+    age: "not stated on the page read (the Code targets services likely to be accessed by children)"
+    source_url: "https://www.oaic.gov.au/privacy/privacy-registers/privacy-codes/childrens-online-privacy-code"
+    source_ref: "OAIC: Children's Online Privacy Code"
+penalties_note:
+  summary: "Serious or repeated interference with privacy (s 13G): for a body corporate, the greater of AUD 50,000,000, three times the benefit obtained that is reasonably attributable to the contravention, or (if the benefit cannot be determined) 30% of adjusted turnover; for a person other than a body corporate, AUD 2,500,000. The OAIC page describes the 30% limb inconsistently (adjusted turnover during the breach turnover period versus 12-month annual turnover), so check the section text."
+  source_url: "https://www.oaic.gov.au/about-the-OAIC/our-regulatory-approach/guide-to-privacy-regulatory-action/chapter-7-privacy-assessments"
+  source_ref: "Privacy Act s 13G; OAIC guide ch. 7"
+not_covered:
+  - "Exceptions to the AUD 3 million turnover rule (for example health service providers, data traders) and the extraterritorial rule in s 5B: not verified from an official source this session."
+  - "Privacy Act sections themselves (the legislation.gov.au page gave only a table of contents), including exact wording of ss 26WH, 26WK, 26WL: not verified from an official source this session beyond the OAIC citations above."
+  - "Spam Act 2003 (email/SMS marketing) and cookie/tracking guidance: not verified from an official source this session."
+  - "Recent Privacy Act amendments (for example statutory tort, automated decision-making transparency, infringement notices): not verified from an official source this session."
+  - "Response deadlines for APP 12 and APP 13 requests: not verified from an official source this session."
+  - "State and territory health records and privacy laws: not verified from an official source this session."
+lawyer_questions:
+  - "Is our annual turnover above AUD 3 million, or does another rule bring us into the Act?"
+  - "Does the Act apply to us as an overseas business with Australian users?"
+  - "Will the Children's Online Privacy Code apply to our service when registered, and from what date?"
+  - "What is our process to assess a suspected breach within 30 days and notify as soon as practicable?"

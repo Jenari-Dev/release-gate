@@ -1,0 +1,107 @@
+# Act on the Protection of Personal Information (Japan, APPI). Curated by release-gate from official sources only.
+# Thresholds and rules change. Verify against the official source before relying on this.
+id: appi
+name: "Act on the Protection of Personal Information (APPI), Japan"
+short_name: APPI
+jurisdiction: Japan
+source_url: "https://www.japaneselawtranslation.go.jp/en/laws/view/4241/en"
+last_verified: 2026-10-18
+applicability:
+  triggers:
+    - id: business-in-japan
+      description: "A business handling personal information in Japan (the Act's defined term, 'business handling personal information')."
+      config_predicate: {jurisdictions_any: [japan]}
+      source_url: "https://www.japaneselawtranslation.go.jp/en/laws/view/4241/en"
+      source_ref: "Art. 16 (definitions of business handling personal information)"
+    - id: foreign-business-supplying-japan
+      description: "A foreign business that handles personal information of a person in Japan in connection with supplying a good or service to a person in Japan (extraterritorial scope)."
+      config_predicate: {jurisdictions_any: [japan]}
+      source_url: "https://www.japaneselawtranslation.go.jp/en/laws/view/4241/en"
+      source_ref: "Art. 171"
+  notes: "The source is the Japanese Law Translation database English text, described by the PPC as a consolidated translation as of April 1, 2023. Only the Japanese original has legal effect; the translation is a reference. Later amendments, PPC guidelines and Commission rules (which fix breach-report details) were not read in full. The PPC breach page is in Japanese; the paraphrase below is mine."
+obligations:
+  - id: specify-purpose
+    summary: "Specify the purpose of use as much as possible; changes to the purpose are allowed only within a scope reasonably linked to the original purpose."
+    check: "Every field in data-inventory.yaml has a specific purpose; the privacy notice states it."
+    inventory_keys: [fields.purpose]
+    source_url: "https://www.japaneselawtranslation.go.jp/en/laws/view/4241/en"
+    source_ref: "Art. 17"
+  - id: purpose-limitation
+    summary: "Do not handle personal information beyond the scope needed for the specified purpose without the person's prior consent, subject to listed exceptions."
+    check: "No field is reused for a new purpose (for example marketing) without a recorded consent."
+    inventory_keys: [fields.purpose]
+    source_url: "https://www.japaneselawtranslation.go.jp/en/laws/view/4241/en"
+    source_ref: "Art. 18"
+  - id: proper-acquisition-sensitive-consent
+    summary: "Do not acquire personal information by deception or other wrongful means. Prior consent is required to acquire sensitive personal information (the Act's term; defined as information needing special care to avoid unjust discrimination, prejudice or other disadvantages), subject to exceptions."
+    check: "Any sensitive category in the inventory (health, creed, criminal history and similar) is collected only with explicit consent."
+    inventory_keys: [fields.category]
+    source_url: "https://www.japaneselawtranslation.go.jp/en/laws/view/4241/en"
+    source_ref: "Art. 20, Art. 2(3)"
+  - id: notify-purpose
+    summary: "On acquiring personal information, promptly notify the person of the purpose of use or make it public, subject to exceptions."
+    check: "A privacy notice or collection-point notice states the purpose."
+    source_url: "https://www.japaneselawtranslation.go.jp/en/laws/view/4241/en"
+    source_ref: "Art. 21"
+  - id: security-control
+    summary: "Take necessary and appropriate measures for the security control of personal data."
+    check: "Security phase findings show no open critical gaps for systems holding personal data."
+    source_url: "https://www.japaneselawtranslation.go.jp/en/laws/view/4241/en"
+    source_ref: "Art. 23"
+  - id: third-party-provision-consent
+    summary: "Prior consent is required before providing personal data to a third party, with exceptions. An opt-out mechanism is allowed in certain cases (para. 2), and entrustment to a processor, mergers and joint use are treated separately (para. 5)."
+    check: "Each recipient in the inventory is classed as processor/entrustee or third party; third-party disclosures have consent or a documented exception."
+    inventory_keys: [fields.recipients, fields.shared_with]
+    source_url: "https://www.japaneselawtranslation.go.jp/en/laws/view/4241/en"
+    source_ref: "Art. 27(1), 27(2), 27(5)"
+  - id: foreign-third-party-provision
+    summary: "Providing personal data to a third party in a foreign country requires the person's consent, unless the country or recipient meets standards set by the Commission. Information must be provided to the person before consent is obtained."
+    check: "Recipients outside Japan in the inventory have a recorded consent or a Commission-standard basis."
+    inventory_keys: [fields.recipients, fields.transfers]
+    source_url: "https://www.japaneselawtranslation.go.jp/en/laws/view/4241/en"
+    source_ref: "Art. 28"
+breach_notification:
+  - id: report-to-ppc
+    summary: "A business must report certain leaks to the Personal Information Protection Commission and notify the affected persons (Art. 26). The PPC page lists four cases where reporting is mandatory for private businesses: leaks involving sensitive personal information; leaks that risk financial harm if misused; leaks caused by acts that may be unlawful or intended wrongdoing; and leaks affecting more than 1,000 individuals."
+    deadline: "Preliminary report within 3 to 5 days of discovering the leak; final report within 30 days of discovery; 60 days of discovery where the leak may have been caused by an improper purpose (PPC page)"
+    source_url: "https://www.ppc.go.jp/personalinfo/legal/leakAction/"
+    source_ref: "PPC leak-response page; Art. 26 of the Act (details set by Commission rules)"
+user_rights:
+  - id: disclosure
+    summary: "People can request disclosure of retained personal data held about them, with exceptions."
+    source_url: "https://www.japaneselawtranslation.go.jp/en/laws/view/4241/en"
+    source_ref: "Art. 33"
+  - id: correction
+    summary: "People can request correction; the business investigates and notifies the outcome."
+    source_url: "https://www.japaneselawtranslation.go.jp/en/laws/view/4241/en"
+    source_ref: "Art. 34"
+  - id: cease-use-deletion
+    summary: "People can request that use stop or data be deleted where it was handled in violation of Art. 18 or 19, or acquired in violation of Art. 20; para. 5 adds further grounds."
+    source_url: "https://www.japaneselawtranslation.go.jp/en/laws/view/4241/en"
+    source_ref: "Art. 35"
+consent:
+  - id: prior-consent-purpose-change
+    summary: "Prior consent is the route to handle personal information beyond the specified purpose scope."
+    source_url: "https://www.japaneselawtranslation.go.jp/en/laws/view/4241/en"
+    source_ref: "Art. 18"
+  - id: prior-consent-sensitive
+    summary: "Prior consent is required to acquire sensitive personal information, subject to exceptions."
+    source_url: "https://www.japaneselawtranslation.go.jp/en/laws/view/4241/en"
+    source_ref: "Art. 20"
+children: []
+penalties_note:
+  summary: "Individuals who violate a Commission order face up to 1 year imprisonment with work or a fine of up to JPY 1,000,000 (Art. 178); providing or misappropriating a personal information database for illegal profit carries up to 1 year or up to JPY 500,000 (Art. 179). A corporation faces a fine of up to JPY 100,000,000 for the Art. 178 and Art. 179 offences (Art. 184)."
+  source_url: "https://www.japaneselawtranslation.go.jp/en/laws/view/4241/en"
+  source_ref: "Art. 178, 179, 184"
+not_covered:
+  - "Response deadlines for disclosure, correction and cease-use requests: not verified from an official source this session."
+  - "Rules for minors / consent age: not found in the Act text read; PPC guidelines not verified from an official source this session."
+  - "When notifying affected persons is mandatory after a leak, and the exact notification timing: the PPC page read did not state it; not verified from an official source this session."
+  - "Pseudonymised and anonymised information rules, the cross-border transfer standards set by the Commission, and the list of countries recognised by the Commission: not verified from an official source this session."
+  - "Amendments after the April 1, 2023 consolidated translation (including the triennial review): not verified from an official source this session."
+  - "Telecommunications Business Act, Act on Specified Commercial Transactions (email/ad rules) and other Japanese laws on cookies and marketing: not verified from an official source this session."
+lawyer_questions:
+  - "Do we handle personal information of people in Japan in connection with supplying goods or services, bringing us within Art. 171?"
+  - "Which of our recipients are entrusted processors and which are third parties for Art. 27?"
+  - "Is any of our data sensitive personal information, and how is consent collected?"
+  - "What current PPC guidelines apply to our cross-border transfers and to children's data?"

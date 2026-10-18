@@ -1,0 +1,84 @@
+# ePrivacy Directive 2002/58/EC (cookie and marketing rules). Curated by release-gate from official sources only.
+# Thresholds and rules change. Verify against the official source before relying on this.
+id: eprivacy
+name: "Directive 2002/58/EC on privacy and electronic communications (ePrivacy Directive), Art. 5(3) and related articles"
+short_name: ePrivacy
+jurisdiction: EU/EEA
+source_url: "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:02002L0058-20091219"
+last_verified: 2026-10-18
+applicability:
+  triggers:
+    - id: device-storage-or-access
+      description: "The product stores information on, or reads information from, an EU user's device (cookies, local storage, device identifiers, SDKs) for anything beyond the two exceptions in Art. 5(3)."
+      config_predicate: {jurisdictions_any: [eu-eea], features_any: [analytics]}
+      source_url: "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:02002L0058-20091219"
+      source_ref: "Art. 5(3)"
+    - id: direct-marketing-email
+      description: "The product sends unsolicited direct marketing by automated calling systems, fax or email to people in the EU."
+      config_predicate: {jurisdictions_any: [eu-eea], features_any: [sends_email]}
+      source_url: "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:02002L0058-20091219"
+      source_ref: "Art. 13"
+  notes: "This is a Directive: each Member State implements it in national law, so national text and national regulator guidance decide the details. The version read is the consolidated text of 2009-12-19 on EUR-Lex; later amendments were not checked. Where the GDPR also applies, the GDPR consent standard governs the consent itself; that cross-reference was not verified from an official source this session."
+obligations:
+  - id: consent-for-device-access
+    summary: "Storing information on, or accessing information already stored on, a user's device is allowed only if the user has agreed after being given clear and comprehensive information, including about the purposes."
+    check: "Cookie and storage audit: every non-exempt cookie, local-storage key, SDK identifier or pixel is blocked until the user opts in; the banner can be shown to have recorded consent."
+    inventory_keys: [cookies, trackers]
+    source_url: "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:02002L0058-20091219"
+    source_ref: "Art. 5(3)"
+  - id: exception-transmission
+    summary: "No consent is needed where the storage or access is solely for carrying out the transmission of a communication over an electronic communications network."
+    check: "Cookies claimed to be exempt are documented as serving only transmission."
+    source_url: "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:02002L0058-20091219"
+    source_ref: "Art. 5(3)"
+  - id: exception-strictly-necessary
+    summary: "No consent is needed where the storage or access is strictly necessary to provide an information society service the user has explicitly requested."
+    check: "Each cookie treated as exempt has a documented strictly-necessary purpose (for example login session); analytics and advertising cookies are not treated as exempt."
+    source_url: "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:02002L0058-20091219"
+    source_ref: "Art. 5(3)"
+  - id: marketing-prior-consent
+    summary: "Direct marketing by automated calling systems, fax or email requires the recipient's prior agreement."
+    check: "Newsletter or marketing email signup records an explicit opt-in; no marketing to purchased lists."
+    inventory_keys: [fields.marketing_consent]
+    source_url: "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:02002L0058-20091219"
+    source_ref: "Art. 13(1)"
+  - id: marketing-existing-customer
+    summary: "A business that got a customer's email address in the context of a sale may use it to market its own similar products or services, if the customer can object easily and free of charge when the address is collected and in every message."
+    check: "If relying on this exception: opt-out is offered at collection and in every email; only similar own products are promoted."
+    source_url: "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:02002L0058-20091219"
+    source_ref: "Art. 13(2)"
+  - id: marketing-sender-identity
+    summary: "Marketing email that hides the sender's identity, or has no valid address to send an opt-out request to, is prohibited."
+    check: "Every marketing email shows the sender and has a working unsubscribe address or link."
+    source_url: "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:02002L0058-20091219"
+    source_ref: "Art. 13(4)"
+breach_notification:
+  - id: provider-breach
+    summary: "Providers of publicly available electronic communications services notify the competent national authority of a personal data breach without undue delay, and also the affected subscriber or individual if the breach is likely to adversely affect their data or privacy (unless protective technology made the data unintelligible). Providers keep an inventory of breaches. This applies to communications providers, not to ordinary websites or apps."
+    deadline: "without undue delay (Art. 4(3)); no fixed number of hours in this Directive text as read"
+    source_url: "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:02002L0058-20091219"
+    source_ref: "Art. 4(3), 4(4)"
+user_rights:
+  - id: marketing-objection-at-collection
+    summary: "Where the existing-customer exception is used, customers can object to marketing easily and free of charge, at collection and in each message."
+    source_url: "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:02002L0058-20091219"
+    source_ref: "Art. 13(2)"
+consent:
+  - id: clear-information-first
+    summary: "Consent for device access must follow clear and comprehensive information about the purposes of the storage or access."
+    source_url: "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:02002L0058-20091219"
+    source_ref: "Art. 5(3)"
+  - id: marketing-opt-in-natural-persons
+    summary: "The prior-agreement rule for automated calls, fax and email covers subscribers who are natural persons; Member States protect the legitimate interests of other subscribers."
+    source_url: "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:02002L0058-20091219"
+    source_ref: "Art. 13(5)"
+children: []
+not_covered:
+  - "The GDPR-standard of consent (no pre-ticked boxes, equal-prominence reject button) as applied to cookie banners: not verified from an official source this session; check the national regulator."
+  - "Any specific cookie-lifetime or analytics-exemption rules: these come from national regulators and were not verified from an official source this session."
+  - "The proposed ePrivacy Regulation and any later amendment of the Directive: not checked."
+  - "National implementing law of any particular Member State (including Art. 13(3) opt-in versus opt-out choice for non-email marketing): not verified from an official source this session."
+lawyer_questions:
+  - "Which of our cookies, SDKs and identifiers fall outside the two Art. 5(3) exceptions in each target Member State?"
+  - "What does the national regulator in each target country require for banner design and for analytics?"
+  - "Can we rely on the existing-customer marketing exception under the national law of each target country?"

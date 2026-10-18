@@ -1,0 +1,164 @@
+# General Data Protection Regulation (EU) 2016/679. Curated by release-gate from official sources only.
+# Thresholds and rules change. Verify against the official source before relying on this.
+# Rules change, verify against the official source. This file is a checklist aid, not legal advice.
+id: gdpr
+name: "General Data Protection Regulation (EU) 2016/679"
+short_name: GDPR
+jurisdiction: EU/EEA
+source_url: "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32016R0679"
+last_verified: 2026-10-18
+applicability:
+  triggers:
+    - id: established-in-eu
+      description: "Personal data is processed in the context of the activities of an EU establishment of a controller or processor, wherever the processing itself takes place."
+      config_predicate: {jurisdictions_any: [eu-eea]}
+      source_url: "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32016R0679"
+      source_ref: "Art. 3(1)"
+    - id: targets-people-in-eu
+      description: "A controller or processor not established in the EU offers goods or services to people in the Union, or monitors their behaviour within the Union."
+      config_predicate: {jurisdictions_any: [eu-eea]}
+      source_url: "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32016R0679"
+      source_ref: "Art. 3(2)"
+  notes: "EEA application of the text is by incorporation into the EEA Agreement; that incorporation was not checked this session. Member States add national rules (for example the child consent age)."
+obligations:
+  - id: lawful-basis
+    summary: "Every processing purpose needs at least one lawful basis from Art. 6(1)(a)-(f): consent, contract, legal obligation, vital interests, public interest or official authority, or legitimate interests (which yield to the person's overriding rights, especially a child's)."
+    check: "Every personal-data field or purpose in data-inventory.yaml names a lawful_basis; consent-based items are backed by a real consent mechanism in code."
+    inventory_keys: [fields.lawful_basis, fields.purpose]
+    source_url: "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32016R0679"
+    source_ref: "Art. 6(1)"
+  - id: transparency-notice
+    summary: "People must be given the information required by Art. 13 when data is collected from them, and by Art. 14 when it comes from another source (Art. 14(3) timing: generally no later than one month)."
+    check: "A privacy notice exists, is linked where data is collected, and covers the purposes and recipients recorded in data-inventory.yaml."
+    inventory_keys: [fields.purpose, fields.recipients]
+    source_url: "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32016R0679"
+    source_ref: "Art. 13, 14"
+  - id: records-of-processing
+    summary: "Controllers and processors keep written (electronic is fine) records of processing. Organisations under 250 employees are exempt unless the processing is likely to be high-risk, is not occasional, or involves special-category or criminal-offence data."
+    check: "data-inventory.yaml (or an equivalent record) lists purposes, data categories, recipients, transfers and retention for each processing activity."
+    inventory_keys: [fields.purpose, fields.recipients, fields.retention, fields.transfers]
+    source_url: "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32016R0679"
+    source_ref: "Art. 30(1), 30(5)"
+  - id: security-of-processing
+    summary: "Controllers and processors apply technical and organisational measures suited to the risk. Examples named in the text: pseudonymisation, encryption, ongoing confidentiality and resilience, restoring access after an incident, and regular testing of the measures."
+    check: "Phase 2-5 security findings (encryption in transit and at rest, access control, backups, testing) show no open critical gaps for systems holding personal data."
+    source_url: "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32016R0679"
+    source_ref: "Art. 32(1)"
+  - id: data-protection-by-design-default
+    summary: "Controllers build in data-protection principles such as data minimisation, and by default process only the personal data needed for each specific purpose (amount, extent, storage period, accessibility)."
+    check: "Each collected field maps to a stated purpose; no optional field is collected by default without need; retention is set per field."
+    inventory_keys: [fields.purpose, fields.retention, fields.required]
+    source_url: "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32016R0679"
+    source_ref: "Art. 25(1), 25(2)"
+  - id: dpia
+    summary: "A data protection impact assessment is required before processing likely to be high risk. Art. 35(3) names: systematic extensive profiling with significant effects, large-scale special-category or criminal-offence data, and large-scale systematic monitoring of public areas."
+    check: "If the inventory shows profiling, large-scale special-category data or large-scale monitoring, a DPIA document is referenced."
+    inventory_keys: [fields.category, fields.profiling]
+    source_url: "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32016R0679"
+    source_ref: "Art. 35(1), 35(3)"
+  - id: dpo
+    summary: "A data protection officer must be designated if the controller or processor is a public authority, or its core activities involve large-scale regular and systematic monitoring of people, or large-scale special-category or criminal-offence data."
+    check: "Ask whether any of the three Art. 37(1) triggers apply; if so, a DPO contact is published."
+    source_url: "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32016R0679"
+    source_ref: "Art. 37(1)"
+  - id: eu-representative
+    summary: "A controller or processor covered only because of Art. 3(2) designates in writing a representative in the Union (exceptions exist in Art. 27 and were not verified this session)."
+    check: "Non-EU product targeting EU users: a named EU representative appears in the privacy notice."
+    source_url: "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32016R0679"
+    source_ref: "Art. 27(1)"
+  - id: international-transfers
+    summary: "Transfers to third countries or international organisations are allowed only under Chapter V: an adequacy decision (Art. 45) or appropriate safeguards with enforceable rights and remedies (Art. 46)."
+    check: "Every recipient or processor outside the EEA in data-inventory.yaml has a recorded transfer mechanism."
+    inventory_keys: [fields.recipients, fields.transfers]
+    source_url: "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32016R0679"
+    source_ref: "Art. 44-46"
+breach_notification:
+  - id: notify-authority
+    summary: "Notify the supervisory authority without undue delay and, where feasible, not later than 72 hours after becoming aware, unless the breach is unlikely to risk people's rights and freedoms. A late notice must give reasons. The notice describes the breach, likely consequences, measures taken and a contact point."
+    deadline: "72 hours after becoming aware, where feasible (Art. 33(1))"
+    source_url: "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32016R0679"
+    source_ref: "Art. 33(1), 33(3)"
+  - id: notify-individuals
+    summary: "Tell affected people without undue delay when the breach is likely to result in a high risk to their rights and freedoms."
+    deadline: "without undue delay (no fixed number of hours in Art. 34(1))"
+    source_url: "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32016R0679"
+    source_ref: "Art. 34(1)"
+user_rights:
+  - id: access
+    summary: "Right of access to the personal data and related information."
+    response_deadline: "without undue delay and within one month; extendable by two further months for complex or numerous requests, with notice in the first month (Art. 12(3))"
+    source_url: "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32016R0679"
+    source_ref: "Art. 15, 12(3)"
+  - id: rectification
+    summary: "Right to rectification of inaccurate personal data."
+    response_deadline: "within one month, extendable (Art. 12(3))"
+    source_url: "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32016R0679"
+    source_ref: "Art. 16"
+  - id: erasure
+    summary: "Right to erasure (right to be forgotten); the conditions and exceptions in Art. 17 were not reproduced here."
+    response_deadline: "within one month, extendable (Art. 12(3))"
+    source_url: "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32016R0679"
+    source_ref: "Art. 17"
+  - id: restriction
+    summary: "Right to restriction of processing in the cases listed in Art. 18(1)."
+    response_deadline: "within one month, extendable (Art. 12(3))"
+    source_url: "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32016R0679"
+    source_ref: "Art. 18"
+  - id: portability
+    summary: "Where processing is based on consent or a contract and is automated, people can receive their data in a structured, commonly used, machine-readable format and transmit it to another controller."
+    response_deadline: "within one month, extendable (Art. 12(3))"
+    source_url: "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32016R0679"
+    source_ref: "Art. 20"
+  - id: object
+    summary: "Right to object. For direct marketing (including related profiling) people can object at any time and the data must then stop being used for that purpose (Art. 21(2)-(3))."
+    response_deadline: "within one month, extendable (Art. 12(3))"
+    source_url: "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32016R0679"
+    source_ref: "Art. 21"
+  - id: automated-decisions
+    summary: "Right not to be subject to a decision based solely on automated processing, including profiling, that has legal or similarly significant effects, subject to exceptions (contract necessity, authorisation by law, explicit consent)."
+    response_deadline: "within one month, extendable (Art. 12(3))"
+    source_url: "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32016R0679"
+    source_ref: "Art. 22"
+  - id: notify-recipients
+    summary: "Controllers have a notification obligation towards recipients regarding rectification, erasure or restriction (Art. 19, title only verified)."
+    source_url: "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32016R0679"
+    source_ref: "Art. 19"
+consent:
+  - id: definition
+    summary: "Consent means any freely given, specific, informed and unambiguous indication of wishes, by a statement or clear affirmative action."
+    source_url: "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32016R0679"
+    source_ref: "Art. 4(11)"
+  - id: demonstrable
+    summary: "The controller must be able to show that consent was given, and a consent request inside a wider written declaration must be clearly distinguishable from other matters."
+    source_url: "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32016R0679"
+    source_ref: "Art. 7(1), 7(2)"
+  - id: easy-withdrawal
+    summary: "People can withdraw consent at any time and it must be as easy to withdraw as to give; earlier processing stays lawful."
+    source_url: "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32016R0679"
+    source_ref: "Art. 7(3)"
+  - id: no-bundling
+    summary: "Consent is not presumed free if a contract or service is made conditional on consent to processing that is not necessary for it."
+    source_url: "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32016R0679"
+    source_ref: "Art. 7(4)"
+children:
+  - id: info-society-consent-age
+    summary: "Where consent is the basis and an information society service is offered directly to a child, the child's own consent is valid from age 16; Member States may set a lower age, but not below 13. Below the age, parental authorisation is needed."
+    age: "16 (Member States may lower to no less than 13)"
+    source_url: "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32016R0679"
+    source_ref: "Art. 8(1)"
+penalties_note:
+  summary: "Art. 83(4) tier: up to EUR 10,000,000 or 2% of total worldwide annual turnover of the preceding financial year, whichever is higher (covers Arts. 8, 11, 25 to 39, 42, 43). Art. 83(5) tier: up to EUR 20,000,000 or 4%, whichever is higher (covers Arts. 5, 6, 7, 9, data subject rights Arts. 12 to 22, and transfers Arts. 44 to 49)."
+  source_url: "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32016R0679"
+  source_ref: "Art. 83(4), 83(5)"
+not_covered:
+  - "Art. 5 principles, Art. 9 special-category conditions, Art. 17 erasure exceptions, Art. 28 processor contracts, Art. 26 joint controllers: not reproduced in this file."
+  - "Art. 27 representative exceptions and Art. 30(5) details beyond the summary above: only partly verified."
+  - "National member-state laws (child consent age per country, national DPO rules): not verified from an official source this session."
+  - "EDPB / national authority guidance on cookies, legitimate interests and transfers (SCCs, transfer impact assessments): not verified from an official source this session."
+  - "Whether EEA states apply the text identically (EEA Agreement incorporation): not verified from an official source this session."
+lawyer_questions:
+  - "Are we a controller, a joint controller or a processor for each processing activity?"
+  - "Is our chosen lawful basis defensible for each purpose, especially legitimate interests?"
+  - "Which EU member-state rules (child consent age, national DPO duties) apply to our actual user base?"
+  - "Do our transfers outside the EEA rely on a valid mechanism, and is a transfer assessment needed?"
+  - "Do we need an EU representative or a DPO, and is a DPIA required for our features?"

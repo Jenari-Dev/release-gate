@@ -1,0 +1,117 @@
+# Other US state comprehensive privacy laws (Virginia, Connecticut, Oregon, Texas, Colorado, Utah). Curated by release-gate from official sources only.
+# Thresholds and rules change. Verify against the official source before relying on this.
+id: us-state-privacy
+name: "US state comprehensive consumer privacy laws other than California (confirmed states only)"
+short_name: US state privacy
+jurisdiction: US-other
+source_url: "https://law.lis.virginia.gov/vacode/title59.1/chapter53/section59.1-576/"
+last_verified: 2026-10-18
+applicability:
+  triggers:
+    - id: virginia
+      description: "Virginia (VCDPA): conducts business in Virginia or targets products or services to Virginia residents AND either controls or processes personal data of at least 100,000 consumers during a calendar year, or controls or processes data of at least 25,000 consumers and derives more than 50 percent of gross revenue from selling personal data. Excludes state and local government, GLBA financial institutions and data, HIPAA covered entities and business associates, nonprofits and higher-education institutions."
+      config_predicate: {jurisdictions_any: [us-other]}
+      source_url: "https://law.lis.virginia.gov/vacode/title59.1/chapter53/section59.1-576/"
+      source_ref: "Va. Code 59.1-576(A), 59.1-576(B)"
+    - id: connecticut
+      description: "Connecticut (CTDPA): does business in Connecticut or targets residents AND, in the preceding year, controlled or processed personal data of at least 35,000 consumers (excluding data processed solely to complete a payment transaction), OR controlled or processed consumers' sensitive data (same payment exclusion), OR offered consumers' personal data for sale. Consumer health data controllers are covered regardless of size."
+      config_predicate: {jurisdictions_any: [us-other]}
+      source_url: "https://portal.ct.gov/ag/sections/privacy/the-connecticut-data-privacy-act"
+      source_ref: "Connecticut AG CTDPA page, applicability"
+    - id: oregon
+      description: "Oregon (OCPA): does business in Oregon or provides products or services to Oregon residents AND in a calendar year controls or processes personal data of 100,000 or more consumers, OR of 25,000 or more consumers while deriving over 25 percent of annual gross revenue from selling personal data. Motor vehicle manufacturers and affiliates processing vehicle-use data are covered from September 2025 regardless of consumer count. In force since July 1, 2024."
+      config_predicate: {jurisdictions_any: [us-other]}
+      source_url: "https://www.doj.state.or.us/consumer-protection/for-businesses/privacy-law-faqs-for-businesses/"
+      source_ref: "Oregon DOJ privacy law FAQs for businesses"
+    - id: texas
+      description: "Texas (TDPSA): a person that conducts business in Texas or produces a product or service consumed by Texas residents, processes or sells personal data, and is not a small business as defined by the US Small Business Administration (subject to the carve-back in Sec. 541.107). Exempts state agencies, political subdivisions, certain financial institutions, HIPAA covered entities, nonprofits, higher-education institutions and certain electric utilities."
+      config_predicate: {jurisdictions_any: [us-other]}
+      source_url: "https://capitol.texas.gov/tlodocs/88R/billtext/html/HB00004F.htm"
+      source_ref: "Bus. & Com. Code Sec. 541.002 (enrolled H.B. 4, 88th Leg.)"
+    - id: colorado
+      description: "Colorado (CPA): a legal entity that does business in Colorado or intentionally targets products or services to Colorado residents AND either controls or processes personal data of at least 100,000 consumers per calendar year, or derives revenue from selling personal data and controls or processes personal data of at least 25,000 consumers. In force July 1, 2023."
+      config_predicate: {jurisdictions_any: [us-other]}
+      source_url: "https://leg.colorado.gov/bills/sb21-190"
+      source_ref: "Colorado Legislature SB21-190 bill summary"
+    - id: utah
+      description: "Utah (UCPA): a controller or processor that conducts business in Utah or produces a product or service targeted to Utah residents, has annual revenue of USD 25,000,000 or more, AND either controls or processes personal data of 100,000 or more consumers in a calendar year, or derives over 50 percent of gross revenue from selling personal data and controls or processes data of 25,000 or more consumers. The version read is marked effective 5/1/2024 and superseded 1/1/2027."
+      config_predicate: {jurisdictions_any: [us-other]}
+      source_url: "https://le.utah.gov/xcode/Title13/Chapter61/C13-61-S102_2024050120240501.pdf"
+      source_ref: "Utah Code 13-61-102(1)"
+  notes: "Each state's Act has its own thresholds, exemptions and effective dates, and several have been amended (Connecticut lowered its threshold; Oregon dropped its cure period on January 1, 2026; the Utah text read is flagged as superseded from 1/1/2027). Treat this file as a screening aid only. A product can be covered by several of these laws at once."
+obligations:
+  - id: ct-opt-out-preference-signals
+    summary: "Connecticut controllers must honour opt-out preference signals starting January 1, 2025 (per the Connecticut AG page)."
+    check: "If the Connecticut threshold is met, a browser-level opt-out signal (for example GPC) stops targeted advertising and sale in the cookie/tracker audit."
+    inventory_keys: [cookies, trackers]
+    source_url: "https://portal.ct.gov/ag/sections/privacy/the-connecticut-data-privacy-act"
+    source_ref: "Connecticut AG CTDPA page"
+  - id: ct-minors-online-services
+    summary: "For online services offered to minors under 18, Connecticut controllers may not process a minor's data for targeted advertising or any sale, must get consent before profiling a minor, may not use design features that significantly increase, sustain or extend a minor's use, must limit precise geolocation to what is strictly necessary with an ongoing signal, and must run data protection impact assessments for online offerings aimed at minors (per the Connecticut AG page)."
+    check: "If the product is used by under-18s in Connecticut, confirm no targeted ads or sale for minors, and a documented assessment."
+    source_url: "https://portal.ct.gov/ag/sections/privacy/the-connecticut-data-privacy-act"
+    source_ref: "Connecticut AG CTDPA page, minors"
+  - id: tx-small-business-test
+    summary: "Texas applies only to persons that are not SBA-defined small businesses (subject to Sec. 541.107, not read in full). Whether the company is an SBA small business depends on SBA size standards, which were not read this session."
+    check: "Record SBA size status and whether sensitive data is sold; if unknown, ask a lawyer."
+    source_url: "https://capitol.texas.gov/tlodocs/88R/billtext/html/HB00004F.htm"
+    source_ref: "Bus. & Com. Code Sec. 541.002(a)(3)"
+  - id: or-no-cure-period
+    summary: "In Oregon, since January 1, 2026 the Attorney General no longer has to give notice and a chance to cure before enforcing; civil penalties are up to USD 7,500 per violation."
+    check: "Do not plan on a cure period for Oregon exposure."
+    source_url: "https://www.doj.state.or.us/consumer-protection/for-businesses/privacy-law-faqs-for-businesses/"
+    source_ref: "Oregon DOJ privacy law FAQs for businesses"
+  - id: tx-cure-and-penalty
+    summary: "In Texas the Attorney General must give written notice at least 30 days before suing and cannot sue if the violation is cured and a written statement is provided within that period; after that, civil penalties are up to USD 7,500 per violation."
+    check: "Awareness item: the 30-day cure window applies in Texas."
+    source_url: "https://capitol.texas.gov/tlodocs/88R/billtext/html/HB00004F.htm"
+    source_ref: "Bus. & Com. Code Sec. 541.154, 541.155"
+breach_notification: []
+user_rights:
+  - id: ct-response
+    summary: "Connecticut: controllers respond to consumer requests within 45 days of receipt; they may extend by another 45 days under certain conditions; appeals are answered within 60 days of receipt."
+    response_deadline: "45 days (+45); appeals 60 days"
+    source_url: "https://portal.ct.gov/ag/sections/privacy/the-connecticut-data-privacy-act"
+    source_ref: "Connecticut AG CTDPA page"
+  - id: or-rights
+    summary: "Oregon consumers can ask for access, a list of specific third parties that received their data, correction, deletion, a copy of their data, and opt-out of certain processing."
+    response_deadline: "no later than 45 days after receipt; extendable by 45 days with notice and explanation"
+    source_url: "https://www.doj.state.or.us/consumer-protection/for-businesses/privacy-law-faqs-for-businesses/"
+    source_ref: "Oregon DOJ privacy law FAQs for businesses"
+  - id: tx-rights
+    summary: "Texas consumers can confirm and access their data, correct inaccuracies, delete data provided by or obtained about them, get a portable copy of previously provided data, and opt out of targeted advertising, sale of personal data, or certain profiling with legal or similarly significant effects."
+    response_deadline: "without undue delay and no later than the 45th day; extendable once by 45 days if the consumer is told within the first 45 days (Sec. 541.052(b))"
+    source_url: "https://capitol.texas.gov/tlodocs/88R/billtext/html/HB00004F.htm"
+    source_ref: "Bus. & Com. Code Sec. 541.051(b), 541.052(b)"
+  - id: co-rights
+    summary: "Colorado consumers can opt out of a controller's processing of their personal data, access, correct and delete it, and obtain a portable copy."
+    source_url: "https://leg.colorado.gov/bills/sb21-190"
+    source_ref: "Colorado Legislature SB21-190 bill summary"
+consent:
+  - id: ct-under-16-opt-in
+    summary: "Connecticut requires opt-in consent before selling a consumer's personal data or processing it for targeted advertising where the consumer is under 16."
+    source_url: "https://portal.ct.gov/ag/sections/privacy/the-connecticut-data-privacy-act"
+    source_ref: "Connecticut AG CTDPA page, minors"
+children:
+  - id: ct-under-13-sensitive
+    summary: "In Connecticut, personal data of a child under 13 is treated as sensitive data; a parent or guardian may exercise rights for the child, and COPPA rules apply."
+    age: "under 13 (sensitive data); under 16 (opt-in for sale or targeted ads); under 18 (online service protections)"
+    source_url: "https://portal.ct.gov/ag/sections/privacy/the-connecticut-data-privacy-act"
+    source_ref: "Connecticut AG CTDPA page, minors"
+  - id: va-coppa-parental-consent
+    summary: "In Virginia, controllers and processors that meet COPPA's verifiable parental consent requirements are treated as compliant with the chapter's parental consent obligations."
+    age: "under 13 (COPPA)"
+    source_url: "https://law.lis.virginia.gov/vacode/title59.1/chapter53/section59.1-576/"
+    source_ref: "Va. Code 59.1-576(D)"
+not_covered:
+  - "Rights lists, response deadlines, cure periods and penalties for Virginia and Utah, and the Connecticut penalty and cure rules: not verified from an official source this session."
+  - "Texas small-business carve-back (Sec. 541.107) full text and later Texas amendments: not verified from an official source this session. The Texas statute site could not be read; the enrolled bill is cited."
+  - "Colorado later amendments (including any change to the threshold structure) and the Colorado cure period: not verified from an official source this session; coag.gov pages returned no content."
+  - "Other states that may have comprehensive privacy laws (for example Montana, Iowa, Delaware, New Hampshire, New Jersey, Nebraska, Tennessee, Minnesota, Maryland, Indiana, Kentucky, Rhode Island): existence, effective dates and thresholds not verified from an official source this session."
+  - "Sector and health-data laws (for example Washington My Health My Data, Nevada), state breach notification statutes, and state children's design codes: not verified from an official source this session."
+lawyer_questions:
+  - "Which of these states' thresholds do we actually meet, counting consumers who reside in each state?"
+  - "Which states beyond the six listed apply to us, and what are their current thresholds?"
+  - "Do any of our activities count as sale, targeted advertising or profiling under each state's definitions?"
+  - "How do we treat minors' data, and does Connecticut's under-18 rule apply to our product?"
+  - "Are we an SBA small business for the Texas test, and does the sensitive-data sale carve-back apply?"

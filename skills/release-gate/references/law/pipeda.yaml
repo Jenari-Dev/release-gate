@@ -1,0 +1,95 @@
+# Personal Information Protection and Electronic Documents Act (Canada, PIPEDA). Curated by release-gate from official sources only.
+# Thresholds and rules change. Verify against the official source before relying on this.
+id: pipeda
+name: "Personal Information Protection and Electronic Documents Act (PIPEDA), S.C. 2000, c. 5"
+short_name: PIPEDA
+jurisdiction: Canada
+source_url: "https://laws-lois.justice.gc.ca/eng/acts/P-8.6/FullText.html"
+last_verified: 2026-10-18
+applicability:
+  triggers:
+    - id: commercial-activity
+      description: "An organization that collects, uses or discloses personal information in the course of commercial activities, or handles employee information connected with a federal work, undertaking or business."
+      config_predicate: {jurisdictions_any: [canada]}
+      source_url: "https://laws-lois.justice.gc.ca/eng/acts/P-8.6/FullText.html"
+      source_ref: "PIPEDA s. 4(1)"
+  notes: "Some provinces have their own private-sector privacy laws that may apply instead of, or alongside, PIPEDA; the province-by-province rules and the cross-border reach of PIPEDA were not verified this session. Part 1 text was read in a single fetch of the consolidated Act."
+obligations:
+  - id: comply-with-schedule-1
+    summary: "Organizations must comply with the obligations in Schedule 1 (subject to ss. 6 to 9). Schedule 1 contains ten principles: accountability; identifying purposes; consent; limiting collection; limiting use, disclosure and retention; accuracy; safeguards; openness; individual access; challenging compliance."
+    check: "Phase 7 maps the data inventory and privacy notice to the ten principles."
+    source_url: "https://laws-lois.justice.gc.ca/eng/acts/P-8.6/FullText.html"
+    source_ref: "PIPEDA s. 5(1); Schedule 1 (Principles 4.1-4.10)"
+  - id: reasonable-purposes
+    summary: "Personal information may be collected, used or disclosed only for purposes that a reasonable person would consider appropriate in the circumstances."
+    check: "Each purpose in data-inventory.yaml is one a reasonable person would find appropriate; intrusive or unnecessary fields are flagged."
+    inventory_keys: [fields.purpose]
+    source_url: "https://laws-lois.justice.gc.ca/eng/acts/P-8.6/FullText.html"
+    source_ref: "PIPEDA s. 5(3)"
+  - id: consent
+    summary: "Knowledge and consent are generally required to collect, use or disclose personal information, with exceptions. Purposes must be explained clearly enough to be understood. Consent cannot be made a condition of a product or service beyond what the stated purposes need, cannot be obtained by deception, is generally express for sensitive information (implied may suffice for less sensitive), and can be withdrawn subject to legal or contractual limits and reasonable notice."
+    check: "Consent mechanism exists for each purpose that is not covered by an exception; sensitive fields use express consent; withdrawal is possible."
+    inventory_keys: [fields.lawful_basis, fields.purpose]
+    source_url: "https://laws-lois.justice.gc.ca/eng/acts/P-8.6/FullText.html"
+    source_ref: "Schedule 1, Principle 4.3"
+  - id: consent-exceptions-limited
+    summary: "Collection without consent is allowed only in limited cases (for example clearly in the individual's interest where consent cannot be obtained in time, or specified publicly available information). Disclosure without consent is allowed only in limited cases (for example court order or subpoena, debt collection, an emergency threatening life, health or security)."
+    check: "Any no-consent data flow in the inventory cites one of the specific s. 7 exceptions."
+    source_url: "https://laws-lois.justice.gc.ca/eng/acts/P-8.6/FullText.html"
+    source_ref: "PIPEDA s. 7(1), 7(3)"
+  - id: breach-records
+    summary: "Keep a record of every breach of security safeguards involving personal information under your control, and give the Commissioner access on request. The Regulations require keeping the record for 24 months after the day the breach is determined to have occurred, with enough detail for the Commissioner to verify compliance."
+    check: "A breach log exists and retains entries for at least 24 months."
+    source_url: "https://laws-lois.justice.gc.ca/eng/regulations/SOR-2018-64/FullText.html"
+    source_ref: "PIPEDA s. 10.3; Breach of Security Safeguards Regulations s. 6(1), 6(2)"
+breach_notification:
+  - id: report-to-commissioner
+    summary: "Report to the Privacy Commissioner any breach of security safeguards involving personal information under your control if it is reasonable to believe it creates a real risk of significant harm to an individual. The written report covers circumstances and cause, when it occurred, the information involved, number of people affected, mitigation steps, steps to notify individuals, and a contact person."
+    deadline: "as soon as feasible after determining the breach occurred (s. 10.1(2))"
+    source_url: "https://laws-lois.justice.gc.ca/eng/acts/P-8.6/FullText.html"
+    source_ref: "PIPEDA s. 10.1(1), 10.1(2); Regulations s. 2"
+  - id: notify-individuals
+    summary: "Notify affected individuals under the same real-risk-of-significant-harm test, unless prohibited by law. The notice describes the circumstances, when it occurred, the information involved, steps taken to reduce harm, steps individuals can take, and contact information."
+    deadline: "as soon as feasible after determining the breach occurred (s. 10.1(6))"
+    source_url: "https://laws-lois.justice.gc.ca/eng/acts/P-8.6/FullText.html"
+    source_ref: "PIPEDA s. 10.1(3), 10.1(6); Regulations s. 3"
+  - id: significant-harm-definition
+    summary: "Significant harm includes bodily harm, humiliation, damage to reputation or relationships, loss of employment or business opportunities, financial loss, identity theft, negative effects on credit records, and damage to or loss of property. Risk factors include the sensitivity of the information and the probability of misuse."
+    deadline: "n/a (definition used by the two duties above)"
+    source_url: "https://laws-lois.justice.gc.ca/eng/acts/P-8.6/FullText.html"
+    source_ref: "PIPEDA s. 10.1(7), 10.1(8)"
+user_rights:
+  - id: access
+    summary: "Individuals can request access to their personal information in writing; the organization responds with due diligence, and the time limit can be extended with notice. No response within the time limit is a deemed refusal."
+    response_deadline: "no later than 30 days after receipt; extension notice must be sent within 30 days (s. 8(3), 8(4), 8(5))"
+    source_url: "https://laws-lois.justice.gc.ca/eng/acts/P-8.6/FullText.html"
+    source_ref: "PIPEDA s. 8(1), 8(3)-(5)"
+  - id: withdraw-consent
+    summary: "Individuals may withdraw consent at any time, subject to legal or contractual restrictions and reasonable notice."
+    source_url: "https://laws-lois.justice.gc.ca/eng/acts/P-8.6/FullText.html"
+    source_ref: "Schedule 1, Principle 4.3"
+consent:
+  - id: express-for-sensitive
+    summary: "Express consent is generally expected for sensitive information; implied consent may suffice for less sensitive information."
+    source_url: "https://laws-lois.justice.gc.ca/eng/acts/P-8.6/FullText.html"
+    source_ref: "Schedule 1, Principle 4.3"
+  - id: no-conditioning
+    summary: "An organization cannot make consent a condition of supplying a product or service beyond what is needed for the stated purposes, and cannot obtain consent through deception."
+    source_url: "https://laws-lois.justice.gc.ca/eng/acts/P-8.6/FullText.html"
+    source_ref: "Schedule 1, Principle 4.3"
+children: []
+penalties_note:
+  summary: "Knowingly contravening certain provisions (s. 8(8), s. 10.1, s. 10.3(1), s. 27.1(1)) or obstructing the Commissioner is an offence: a fine of up to CAD 10,000 on summary conviction or up to CAD 100,000 on indictment."
+  source_url: "https://laws-lois.justice.gc.ca/eng/acts/P-8.6/FullText.html"
+  source_ref: "PIPEDA s. 28"
+not_covered:
+  - "Rules specific to children or minors (consent age): not found in the text read; OPC guidance not verified from an official source this session."
+  - "Provincial private-sector privacy laws (for example Quebec, Alberta, British Columbia) and whether they replace PIPEDA for a given business: not verified from an official source this session."
+  - "Bill C-27 / successor reform and any change to PIPEDA penalties: not verified from an official source this session."
+  - "Canada's Anti-Spam Legislation (CASL) rules for commercial email, and OPC guidance on cookies and tracking: not verified from an official source this session."
+  - "Cross-border transfer and outsourcing expectations (Principle 4.1.3 and OPC guidance): not verified from an official source this session."
+lawyer_questions:
+  - "Is our activity a commercial activity under PIPEDA, or does a provincial law apply instead?"
+  - "What counts as a real risk of significant harm for our data set?"
+  - "Is consent for each purpose express or implied, given sensitivity?"
+  - "Do CASL obligations apply to our email and messaging features?"

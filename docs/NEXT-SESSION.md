@@ -1,43 +1,33 @@
-# Next session: build session 2 of 4 — minimum viable skill
+# Next session: build session 3 of 4 — remaining phases + run modes
 
 Paste the prompt below into a fresh Claude Code session started in `~/dev/release-gate`.
 
 ---
 
-We're building `release-gate`, a Claude Code plugin at `~/dev/release-gate`. It runs an evidence-backed pre-release gate (security, privacy, legal drafts, ops) and gives a BLOCK / SHIP WITH ACCEPTED RISKS / SHIP verdict. Every result carries an evidence class, and the honesty rules are non-negotiable. This is **build session 2 of 4**. Session 1 built the foundation. Read these first, in order:
+We're building `release-gate`, a Claude Code plugin at `~/dev/release-gate`. It runs an evidence-backed pre-release gate (security, privacy, legal drafts, ops) and gives a BLOCK / SHIP WITH ACCEPTED RISKS / SHIP verdict. Every result carries an evidence class, and the honesty rules are non-negotiable. This is **build session 3 of 4**. Sessions 1 and 2 built the foundation and the minimum viable skill (phases 0, 1, 2, 3, 7, 8, 13, the eval runner, and first measured scores). Read these first, in order:
 
-1. `docs/BUILD-LOG.md`: what exists, what was verified, open issues.
-2. `skills/release-gate/SKILL.md`: the principles. They bind everything you write.
-3. `skills/release-gate/references/checks.yaml`, `schemas/*.json`, `scripts/rglib.py`, `scripts/report_build.py`: the contracts you build on.
-4. The original spec, if needed: Parts 4 (phases 0, 1, 2, 3, 7, 8, 13) and 6 (evals).
+1. `docs/BUILD-LOG.md` — what exists, what was verified, the measured eval scores, and the open issues (there are 5 carried forward).
+2. `skills/release-gate/SKILL.md` — the 6 principles and the phase router. They bind everything you write.
+3. `skills/release-gate/references/checks.yaml`, `schemas/*.json`, `scripts/rglib.py`, `scripts/report_build.py` — the contracts.
+4. The phase references already written: `references/00,01,02,03,07,08,13-*.md` — match their style and depth.
+5. `evals/run_evals.py`, `evals/probes.py` — the harness you will extend. The original spec Parts 4 (phases 4,5,6,9,10,11,12) and 3 (modes) if needed.
 
 Rules carried over:
 - Public repo identity is JenAriDev / Jenari-Dev only. No personal info, hostnames or local paths in committed files.
-- No sudo. Tools only via `tools.lock.yaml` + `scripts/install_tools.py` (exact versions, official SHA-256). Dev venv: `.venv/bin/python` (`uv pip install --python .venv/bin/python pyyaml jsonschema pytest`).
-- Dynamic tests only against the 127.0.0.1 fixtures. Never contact real third parties.
-- Subagents: implementation on Sonnet, lookups and test runs on Haiku, design and security review on Opus. Max 3–4 concurrent, batched.
+- No sudo. Tools only via `tools.lock.yaml` + `scripts/install_tools.py` (exact versions, official SHA-256 or pinned commit). Dev runs use `uv run --no-project --with pytest --with pyyaml --with jsonschema ...`. Installed tools live under `~/.local/share/release-gate` (bin/ + share root); check with `check_tools.py`.
+- Dynamic tests only against the 127.0.0.1 fixtures. Never contact real third parties. semgrep runs offline with the vendored rules and `--jobs 1`.
+- Subagents: implementation on Sonnet, lookups and test runs on Haiku, design/security review on Opus. Max 3–4 concurrent, batched, each scoped to its own files (sessions share this repo — other agents may be editing; touch only your paths, commit nothing until the end).
 - Commit to our own repo at the end of the session. Never push without the user's OK.
 
-## Goals for session 2
-1. **Fix open issue #1 first.** Vendor pinned semgrep rules (no registry fetch at runtime). Disclose and offer offline modes for osv-scanner and trivy network use in SKILL.md and README.
-2. **Install session-2 tools** through the lock: OWASP ZAP (Java 21 is at `/usr/lib/jvm/java-21-openjdk`), nuclei (pin the templates too), and Playwright + Chromium via npm in a skill-local dir.
-3. **Phase references:** `00-intake`, `01-recon-and-data-map`, `02-static-security`, `03-dynamic-security`, `07-privacy-compliance`, `08-legal-documents`, `13-report-and-verdict`. Each one is a concrete playbook: which script or tool to run, how to map results to `check_id`s and evidence classes, when to spawn the adversarial subagent, and what NOT-TESTED reason to record when something can't run.
-4. **Scripts with tests:**
-   - `data_inventory_scan.py`
-   - `authz_matrix.py`: roles × endpoints × other users' resources. Must turn the fixture IDORs into EXPLOITED with saved request/response, and the clean twins into VERIFIED-ABSENT.
-   - `cookie_audit.mjs`: Playwright, three stages: before consent, after reject, after accept.
-   - `policy_consistency.py`
-5. **Law reference data** `references/law/*.yaml` for the 10 regimes in the spec. Use only facts from official sources fetched this session, each with `source_url` + `last_verified`. Leave out anything unverified rather than guess.
-6. **Legal templates** `templates/legal/*`. Each must start with the mandatory DRAFT / not-legal-advice header (SKILL.md principle 4). Every privacy-policy statement must trace to an inventory entry.
-7. **Eval runner** `evals/run_evals.py`:
-   - Boot each fixture by waiting on its port (up to 60s).
-   - Run the pipeline and score it against `answer-key.yaml`: detection per category, false-positive rate on the clean twins, evidence-class correctness, verdict correctness, and the honesty cases (`honesty-wont-start`, plus a PATH-stripped no-tools run).
-   - Resolve open issue #2 (clean-fixture verdict) and document the decision.
-   - Record the first measured scores in `docs/BUILD-LOG.md`.
-8. Update the SKILL.md router to point at the new references. Keep it short.
+## Goals for session 3
+1. **Phase references + wiring for the remaining phases:** `04-correctness-testing`, `05-performance-stress`, `06-ops-resilience`, `09-platform-requirements`, `10-accessibility`, `11-supply-chain-licensing`, `12-ai-features`. Each a concrete playbook like the existing seven: which script/tool, how results map to the `check_id`s already in `checks.yaml`, evidence classes, adversarial triggers, and the exact NOT-TESTED reason when something can't run.
+2. **`references/stacks/*`** — per-stack notes (python, node, go, rust, java, dotnet, php, unreal/unity, electron, tauri, android, ios, browser-extension): what to detect, which tools apply, stack-specific gotchas. Keep each short.
+3. **Run modes** (spec Part 3): implement `quick`, `retest`, `ci`, `explain` as documented flows (SKILL router + a short reference each). `quick` = secrets + deps + fast SAST + existing tests + policy diff on changed files, no dynamic. `retest` = re-run only previously-failing checks and mark `FIXED` only when the original repro now fails. `ci` = generate `templates/ci/github-actions-release-gate.yml` + branch-protection advice. `explain <finding-id>` = plain-language explanation.
+4. **Templates:** `templates/ci/github-actions-release-gate.yml`, `templates/k6/*` (load/stress/spike/soak), `templates/report/*` (self-contained HTML report template, no external assets).
+5. **Close the session-2 open issues where cheap:** stamp `check_id` per tool in the static flow (issue #1); add a positive-control + more auth shapes to `authz_matrix.py` (issue #2); wire a ZAP baseline + nuclei safe-template smoke run into phase 03 / the eval (issue #5).
+6. **Re-run `evals/run_evals.py` after each phase** and keep the scores table in `docs/BUILD-LOG.md` current. Add correctness/perf/ops coverage to the vuln fixtures' expectations only if you also add the detection for it — never loosen the honesty or verdict rules to make a number look better.
 
-Done when: pytest is green, `run_evals.py` produces a scores table, the vuln fixtures come out BLOCK with the planted IDOR as EXPLOITED, the honesty fixture is BLOCK "insufficient evidence", BUILD-LOG is updated, everything is committed, and `docs/NEXT-SESSION.md` is rewritten for session 3.
+Done when: `pytest` is green, `run_evals.py` still produces the scores table with the vuln fixtures BLOCK (IDOR EXPLOITED) and the honesty fixtures never passing, the new phase references and stack notes exist, the four run modes are implemented and documented, BUILD-LOG is updated, everything is committed, and `docs/NEXT-SESSION.md` is rewritten for session 4.
 
-## Later sessions (for orientation)
-- **Session 3:** phases 4, 5, 6, 9, 10, 11 and 12, `references/stacks/*`, and the modes quick / retest / ci / explain / legal. Re-run the evals after each phase.
-- **Session 4:** polish and publish. That covers a final short SKILL.md, the README (demo cast, sample HTML report, eval table, limitations), a self-audit with release-gate and the Trail of Bits skills, and a visual check of the HTML report. Publish to GitHub only after the user confirms.
+## Session 4 (for orientation)
+Polish and publish: a final short SKILL.md, the README (demo cast, sample HTML report, the eval table, limitations), a self-audit with release-gate and the Trail of Bits skills against this repo, and a visual check of the HTML report. Publish to GitHub only after the user confirms.

@@ -1,0 +1,104 @@
+# Children's Online Privacy Protection Act and COPPA Rule (16 CFR Part 312). Curated by release-gate from official sources only.
+# Thresholds and rules change. Verify against the official source before relying on this.
+id: coppa
+name: "Children's Online Privacy Protection Act (COPPA) and the FTC COPPA Rule, 16 CFR Part 312"
+short_name: COPPA
+jurisdiction: US
+source_url: "https://www.ecfr.gov/current/title-16/part-312"
+last_verified: 2026-10-18
+applicability:
+  triggers:
+    - id: child-directed-service
+      description: "An operator of a commercial website or online service (including mobile apps and connected toys) directed to children under 13 that collects personal information from children."
+      config_predicate: {directed_at_children: true}
+      source_url: "https://www.ftc.gov/business-guidance/resources/complying-coppa-frequently-asked-questions"
+      source_ref: "FTC COPPA FAQ, who must comply; 16 CFR 312.2"
+    - id: actual-knowledge-under-13
+      description: "An operator of a general-audience site or service that has actual knowledge it is collecting personal information from children under 13, or from users of a child-directed service."
+      config_predicate: {children_under_13: true}
+      source_url: "https://www.ftc.gov/business-guidance/resources/complying-coppa-frequently-asked-questions"
+      source_ref: "FTC COPPA FAQ, who must comply; 16 CFR 312.2"
+    - id: mixed-audience
+      description: "A mixed-audience service (a child-directed site where children are not the primary audience) may use an age screen, but cannot block under-13 users from participating and cannot collect personal information from users who identify as under 13 without parental consent."
+      config_predicate: {children_under_13: true}
+      source_url: "https://www.ftc.gov/business-guidance/resources/complying-coppa-frequently-asked-questions"
+      source_ref: "FTC COPPA FAQ, mixed audience"
+  notes: "COPPA protects children under 13 only, per the FTC FAQ. Reach over foreign operators was not verified. The Rule was amended in a notice dated April 22, 2025 (per the FTC); the amended-rule compliance date could not be confirmed from an official page this session."
+obligations:
+  - id: direct-notice-to-parents
+    summary: "Give parents direct notice before collecting a child's data and for material changes: what is collected, how it is used, any third-party disclosures, a link to the online notice, how to consent, and what happens if consent is not given."
+    check: "A parental notice flow exists for any account or data collection from an under-13 user."
+    inventory_keys: [fields.category, fields.purpose, fields.shared_with]
+    source_url: "https://www.ecfr.gov/current/title-16/part-312/section-312.4"
+    source_ref: "16 CFR 312.4"
+  - id: online-privacy-notice
+    summary: "Post a public online notice linked on the home page and wherever children's data is collected, listing operator contact details, data practices and the retention policy."
+    check: "Privacy policy has a children's section linked from signup and home page."
+    source_url: "https://www.ecfr.gov/current/title-16/part-312/section-312.4"
+    source_ref: "16 CFR 312.4"
+  - id: verifiable-parental-consent
+    summary: "Get verifiable parental consent before collecting, using or disclosing a child's personal information, and again for material changes. Methods listed include signed forms, payment-transaction verification, trained phone or video staff, government ID checks (deleted promptly), knowledge-based authentication, and ID with facial recognition (deleted promptly). Email plus confirmation steps is allowed only if the child's data is not disclosed."
+    check: "Under-13 signup is blocked or routed to a consent mechanism that matches one of the listed methods."
+    source_url: "https://www.ecfr.gov/current/title-16/part-312/section-312.5"
+    source_ref: "16 CFR 312.5"
+  - id: separate-consent-third-party
+    summary: "Parents must be able to consent to collection and use without also consenting to disclosure to third parties, unless the disclosure is integral to the service; any such third-party disclosure needs separate verifiable consent."
+    check: "Ad, analytics or SDK third parties receiving under-13 data are covered by a separate consent."
+    inventory_keys: [fields.shared_with, trackers]
+    source_url: "https://www.ecfr.gov/current/title-16/part-312/section-312.5"
+    source_ref: "16 CFR 312.5(a)(2)"
+  - id: no-excess-data
+    summary: "Operators cannot require a child to provide more personal information than is reasonably necessary to take part in a game, prize or other activity."
+    check: "Fields collected from under-13 users are limited to what the activity needs."
+    inventory_keys: [fields.required, fields.purpose]
+    source_url: "https://www.ecfr.gov/current/title-16/part-312/section-312.7"
+    source_ref: "16 CFR 312.7"
+  - id: security-program
+    summary: "Maintain a written security program for children's data: a designated coordinator, at least annual risk assessments, safeguards matched to sensitivity, regular testing, and annual updates. Vet service providers and third parties and get written assurances before sharing data."
+    check: "Written information security program exists and covers children's data; processor contracts include assurances."
+    source_url: "https://www.ecfr.gov/current/title-16/part-312/section-312.8"
+    source_ref: "16 CFR 312.8"
+  - id: retention-deletion
+    summary: "Keep children's personal information only as long as reasonably necessary for its stated purpose, then delete it securely. A written retention policy stating purposes, business need and deletion timeframes is required and goes in the public notice."
+    check: "Retention is defined per field for under-13 data and deletion is implemented."
+    inventory_keys: [fields.retention]
+    source_url: "https://www.ecfr.gov/current/title-16/part-312/section-312.10"
+    source_ref: "16 CFR 312.10"
+  - id: persistent-identifiers-are-personal-info
+    summary: "Personal information under the Rule is broad: names, contact details, persistent identifiers such as IP addresses and device IDs, photos or audio of a child, geolocation, and biometrics. The FTC FAQ gives a customer number held in a cookie, an IP address and a unique device identifier as examples."
+    check: "Cookie and tracker audit treats cookies, device IDs and IPs collected from under-13 users as personal information."
+    inventory_keys: [cookies, trackers]
+    source_url: "https://www.ftc.gov/business-guidance/resources/complying-coppa-frequently-asked-questions"
+    source_ref: "FTC COPPA FAQ; 16 CFR 312.2"
+breach_notification: []
+user_rights:
+  - id: parental-access-deletion
+    summary: "Parents can ask for a description of the data collected, review it, refuse further use or collection, and have it deleted. The operator must verify the requester is the parent without undue burden. An operator may end the service if the parent refuses."
+    source_url: "https://www.ecfr.gov/current/title-16/part-312/section-312.6"
+    source_ref: "16 CFR 312.6"
+consent:
+  - id: consent-before-collection
+    summary: "Parental consent is required before collection, use or disclosure of a child's personal information, and again for material changes to practices the parent already approved. Narrow exceptions exist (for example one-time requests, child safety, internal operations, security)."
+    source_url: "https://www.ecfr.gov/current/title-16/part-312/section-312.5"
+    source_ref: "16 CFR 312.5(a)(1)"
+children:
+  - id: under-13
+    summary: "A child is anyone under 13. A service is judged child-directed by subject matter, visuals, characters, music, models, language, advertising and audience evidence; merely linking to a children's site does not make a site child-directed."
+    age: "under 13"
+    source_url: "https://www.ecfr.gov/current/title-16/part-312/section-312.2"
+    source_ref: "16 CFR 312.2"
+penalties_note:
+  summary: "Courts can impose civil penalties of up to USD 53,088 per violation (inflation-adjusted amount effective January 17, 2025 in 16 CFR 1.98 and quoted in the FTC FAQ); it is adjusted periodically, so check the source for the current figure."
+  source_url: "https://www.ecfr.gov/current/title-16/part-1/section-1.98"
+  source_ref: "16 CFR 1.98; FTC COPPA FAQ"
+not_covered:
+  - "Compliance date of the 2025 amendments (the FTC FAQ and FTC notice page read this session do not state it): not verified from an official source this session."
+  - "Safe harbor program rules (16 CFR 312.11) and the parental-consent method approval process (312.12): only touched on, not verified in detail this session."
+  - "Foreign operators and extraterritorial reach: not verified from an official source this session."
+  - "State children's privacy and age-appropriate design laws, and the FTC's view on teen (13 to 17) data: not verified from an official source this session."
+  - "Any COPPA breach-notification duty: none found in the sections read; not verified as absent."
+lawyer_questions:
+  - "Is our service child-directed, mixed audience, or general audience, and what do we know about under-13 users?"
+  - "Which verifiable parental consent method fits our product and risk?"
+  - "Do our SDKs, ad partners or analytics providers collect persistent identifiers from under-13 users?"
+  - "Does our age screen avoid steering children to falsify age, and what is our response when we learn a user is under 13?"

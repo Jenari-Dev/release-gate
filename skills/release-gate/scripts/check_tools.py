@@ -58,6 +58,17 @@ def _is_exe(p: Path) -> bool:
     return p.is_file() and os.access(p, os.X_OK)
 
 
+PRESENCE_KINDS = frozenset({"archive-dir", "git", "npm"})
+
+
+def share_dir(lock: dict) -> Path:
+    base = lock.get("share_dir")
+    if not base:
+        inst = str(lock.get("install_dir", ""))
+        base = inst.rsplit("/", 1)[0] if "/" in inst else inst
+    return expand(str(base))
+
+
 def resolve_tool(name: str, lock: dict) -> Path | None:
     """Find the executable for `name`: PATH, then install_dir, then venv_dir/bin."""
     entry = (lock.get("tools") or {}).get(name)
@@ -120,6 +131,19 @@ def check_tool(name: str, lock: dict) -> dict[str, Any]:
         "path": None,
         "status": "missing",
     }
+    if entry.get("kind") in PRESENCE_KINDS:
+        # Payload tools (ZAP tree, template/rule snapshots, node+playwright) are
+        # confirmed by their verify_path existing, not by a version command.
+        vp = entry.get("verify_path")
+        target = share_dir(lock) / vp if vp else None
+        if target and target.exists():
+            exe_rel = entry.get("exe_rel")
+            row.update(status="ok", found_version=row["expected"],
+                       path=str(share_dir(lock) / exe_rel) if exe_rel else str(target))
+        else:
+            row["not_tested_reason"] = f"tool unavailable: {name} (missing)"
+        return row
+
     path = resolve_tool(name, lock)
     if path is None:
         row["not_tested_reason"] = f"tool unavailable: {name} (missing)"

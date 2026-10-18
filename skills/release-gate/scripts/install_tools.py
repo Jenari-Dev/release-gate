@@ -199,6 +199,110 @@ def run(cmd: list[str], **kw) -> subprocess.CompletedProcess:
     return subprocess.run(cmd, check=True, capture_output=True, text=True, **kw)  # noqa: S603
 
 
+# --------------------------------------------------------------------------
+# share dir (larger payloads: ZAP, template/rule snapshots, node) — never in repo
+# --------------------------------------------------------------------------
+def share_dir(lock: dict) -> Path:
+    base = lock.get("share_dir")
+    if not base:
+        inst = str(lock["install_dir"])
+        base = inst.rsplit("/", 1)[0] if "/" in inst else inst
+    return expand(str(base))
+
+
+def _require(spec: dict, key: str, name: str):
+    if key not in spec:
+        raise InstallError(f"{name}: lock entry missing '{key}'")
+    return spec[key]
+
+
+def install_archive_dir(name: str, spec: dict, share: Path, workdir: Path | None = None) -> Path:
+    """Download a .tar.gz, verify its sha256, then extract the whole tree with the
+    stdlib 'data' filter (rejects absolute paths, '..', and unsafe links) into
+    share_dir/<install_root>. Only tar archives are accepted here."""
+    source = _require(spec, "source", name)
+    expected = _require(spec, "sha256", name)
+    root = share / _require(spec, "install_root", name)
+    with tempfile.TemporaryDirectory(prefix=f"rg-{name}-", dir=workdir) as tmp:
+        tmpdir = Path(tmp)
+        asset = tmpdir / source.rsplit("/", 1)[-1]
+        download(source, asset)
+        verify_sha256(asset, expected)
+        if spec.get("checksums_url") and spec.get("checksum_source") != "computed-local":
+            listing = tmpdir / "checksums.txt"
+            download(spec["checksums_url"], listing)
+            listed = checksum_from_listing(listing.read_text(encoding="utf-8", errors="replace"), asset.name)
+            if listed is None:
+                raise InstallError(f"{name}: {asset.name} not listed in {spec['checksums_url']}")
+            if listed != expected.lower():
+                raise InstallError(f"{name}: lock sha256 disagrees with published checksums file")
+        if not tarfile.is_tarfile(asset):
+            raise InstallError(f"{name}: archive-dir only supports tar archives, {asset.name} is not one")
+        staging = tmpdir / "x"
+        staging.mkdir()
+        with tarfile.open(asset) as tf:
+            tf.extractall(staging, filter="data")  # stdlib data filter blocks traversal/unsafe links
+        if root.exists():
+            shutil.rmtree(root)
+        root.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(staging), str(root))
+    vp = spec.get("verify_path")
+    if vp and not (share / vp).exists():
+        raise InstallError(f"{name}: expected {vp} after extraction, not found")
+    exe_rel = spec.get("exe_rel")
+    if exe_rel and (share / exe_rel).exists():
+        exe = share / exe_rel
+        exe.chmod(exe.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+    return root
+
+
+def install_git(name: str, spec: dict, share: Path) -> Path:
+    """Clone a repo and check out an exact commit, verified by `git rev-parse HEAD`.
+    The commit sha is the integrity pin (no separate sha256 needed)."""
+    source = _require(spec, "source", name)
+    commit = str(_require(spec, "commit", name))
+    if not re.fullmatch(r"[0-9a-f]{7,40}", commit):
+        raise InstallError(f"{name}: commit is not a hex sha: {commit!r}")
+    if not source.lower().startswith("https://"):
+        raise InstallError(f"{name}: refusing non-https git source: {source}")
+    root = share / _require(spec, "install_root", name)
+    if root.exists():
+        shutil.rmtree(root)
+    root.parent.mkdir(parents=True, exist_ok=True)
+    run(["git", "clone", "--no-checkout", "--filter=blob:none", source, str(root)])
+    run(["git", "-C", str(root), "fetch", "--depth", "1", "origin", commit])
+    run(["git", "-C", str(root), "checkout", "--detach", commit])
+    head = run(["git", "-C", str(root), "rev-parse", "HEAD"]).stdout.strip()
+    if head.lower() != commit.lower() and not head.lower().startswith(commit.lower()):
+        raise InstallError(f"{name}: checked-out HEAD {head} != pinned {commit}")
+    vp = spec.get("verify_path")
+    if vp and not (share / vp).exists():
+        raise InstallError(f"{name}: expected {vp} after clone, not found")
+    return root
+
+
+def install_npm(name: str, spec: dict, share: Path) -> Path:
+    """Install an npm package (pinned version) plus its pinned browser into
+    share_dir/<install_root>. Used for Playwright + Chromium."""
+    version = str(_require(spec, "version", name))
+    package = spec.get("package", name)
+    if not re.fullmatch(r"[A-Za-z0-9@][A-Za-z0-9._/@-]*", package) or not re.fullmatch(r"\d[\w.+!-]*", version):
+        raise InstallError(f"{name}: invalid package/version in lock")
+    root = share / _require(spec, "install_root", name)
+    root.mkdir(parents=True, exist_ok=True)
+    if not (root / "package.json").exists():
+        run(["npm", "init", "-y"], cwd=str(root))
+    run(["npm", "install", "--no-audit", "--no-fund", f"{package}@{version}"], cwd=str(root))
+    browser = spec.get("browser")
+    if browser:
+        env = dict(os.environ, PLAYWRIGHT_BROWSERS_PATH=str(root / "ms-playwright"))
+        run(["npx", "--yes", f"{package}@{version}", "install", browser], cwd=str(root), env=env)
+    vp = spec.get("verify_path")
+    if vp and not (share / vp).exists():
+        raise InstallError(f"{name}: expected {vp} after npm install, not found")
+    return root
+
+
 def ensure_venv(lock: dict) -> Path:
     venv = expand(lock["venv_dir"])
     py = venv / "bin" / "python"
@@ -251,6 +355,22 @@ def probe_version(name: str, spec: dict, install_dir: Path) -> str | None:
     return m.group(1) if m else None
 
 
+PRESENCE_KINDS = frozenset({"archive-dir", "git", "npm"})
+
+
+def is_installed(name: str, spec: dict, lock: dict) -> bool:
+    """Idempotency / status check that works for every kind.
+
+    Runnable kinds (binary, pip) must report the exact pinned version. Payload
+    kinds (archive-dir, git, npm) are confirmed by their verify_path existing,
+    because running a version command on them is heavy or impossible."""
+    kind = spec.get("kind")
+    if kind in PRESENCE_KINDS:
+        vp = spec.get("verify_path")
+        return bool(vp) and (share_dir(lock) / vp).exists()
+    return probe_version(name, spec, expand(lock["install_dir"])) == str(spec["version"])
+
+
 def install_one(name: str, lock: dict, install_dir: Path) -> str:
     spec = lock["tools"][name]
     kind = spec.get("kind")
@@ -258,8 +378,18 @@ def install_one(name: str, lock: dict, install_dir: Path) -> str:
         install_binary(name, spec, install_dir)
     elif kind == "pip":
         install_pip(name, spec, lock, install_dir)
+    elif kind == "archive-dir":
+        install_archive_dir(name, spec, share_dir(lock))
+    elif kind == "git":
+        install_git(name, spec, share_dir(lock))
+    elif kind == "npm":
+        install_npm(name, spec, share_dir(lock))
     else:
         raise InstallError(f"{name}: kind {kind!r} is not installable by this script")
+    if kind in PRESENCE_KINDS:
+        if not is_installed(name, spec, lock):
+            raise InstallError(f"{name}: installed but {spec.get('verify_path')} is missing")
+        return str(spec["version"])
     got = probe_version(name, spec, install_dir)
     if got is None:
         raise InstallError(f"{name}: installed but `{' '.join(spec['version_cmd'])}` did not report a version")
@@ -279,6 +409,17 @@ def dry_run_line(name: str, spec: dict, lock: dict, install_dir: Path) -> str:
         py = lock.get("venv_python", "default")
         return (f"{name} {spec['version']}: uv venv {lock['venv_dir']} (python {py}); "
                 f"uv pip install {spec.get('package', name)}=={spec['version']}; link -> {install_dir / name}")
+    share = share_dir(lock)
+    if kind == "archive-dir":
+        return (f"{name} {spec['version']}: download {spec['source']}; verify sha256 {spec.get('sha256')}; "
+                f"extract (data filter) -> {share / spec.get('install_root', name)}")
+    if kind == "git":
+        return (f"{name} {spec['version']}: git clone {spec['source']} @ {spec.get('commit')} "
+                f"-> {share / spec.get('install_root', name)}")
+    if kind == "npm":
+        b = f" + browser {spec['browser']}" if spec.get("browser") else ""
+        return (f"{name} {spec['version']}: npm install {spec.get('package', name)}@{spec['version']}{b} "
+                f"-> {share / spec.get('install_root', name)}")
     return f"{name} {spec.get('version')}: kind {kind!r} not installable by this script"
 
 
@@ -305,9 +446,8 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.list:
         for name, spec in tools.items():
-            have = probe_version(name, spec, install_dir) if spec.get("version_cmd") else None
-            status = f"installed {have}" if have else "not installed"
-            print(f"{name:14} {spec.get('kind'):7} {spec.get('category', '-'):8} pinned {spec['version']:10} {status}")
+            status = f"installed {spec['version']}" if is_installed(name, spec, lock) else "not installed"
+            print(f"{name:16} {str(spec.get('kind')):11} {str(spec.get('category', '-')):8} pinned {str(spec['version']):10} {status}")
         if not (args.tool or args.all):
             return 0
 
@@ -330,7 +470,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.dry_run:
             print("[dry-run] " + dry_run_line(name, spec, lock, install_dir))
             continue
-        if not args.force and probe_version(name, spec, install_dir) == str(spec["version"]):
+        if not args.force and is_installed(name, spec, lock):
             print(f"[ok] {name} {spec['version']} already installed")
             continue
         try:

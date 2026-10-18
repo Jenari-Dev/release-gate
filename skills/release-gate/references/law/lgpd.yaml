@@ -1,0 +1,97 @@
+# Lei Geral de Protecao de Dados Pessoais, Lei 13.709/2018 (Brazil, LGPD). Curated by release-gate from official sources only.
+# Thresholds and rules change. Verify against the official source before relying on this.
+id: lgpd
+name: "Lei Geral de Protecao de Dados Pessoais (LGPD), Lei n. 13.709 of 14 August 2018"
+short_name: LGPD
+jurisdiction: Brazil
+source_url: "https://basedeconhecimento.cgu.gov.br/server/api/core/bitstreams/40c78348-6c8f-4cc7-a6f1-735feb35c7bc/content"
+last_verified: 2026-10-18
+applicability:
+  triggers:
+    - id: processing-in-brazil-or-targeting-brazil
+      description: "Any processing by a person or entity, regardless of its country of seat or where the data are located, if the processing is carried out in Brazil, or aims at offering goods or services to, or processing data of, individuals located in Brazil, or the data were collected in Brazil."
+      config_predicate: {jurisdictions_any: [brazil]}
+      source_url: "https://basedeconhecimento.cgu.gov.br/server/api/core/bitstreams/40c78348-6c8f-4cc7-a6f1-735feb35c7bc/content"
+      source_ref: "Art. 3, items I-III"
+  notes: "The statute text read is a compiled copy of Lei 13.709 that is dated 20/12/2019 in its header and is hosted by a federal government site (the planalto.gov.br original could not be reached this session). Later amendments were not checked. The ANPD security-incident page was read separately for the breach deadlines."
+obligations:
+  - id: legal-basis
+    summary: "Processing needs one of the Art. 7 legal bases: consent; legal or regulatory obligation; public administration policy execution; research bodies; contract or pre-contract steps requested by the person; exercise of rights in proceedings; protection of life or physical safety; health protection by health professionals or health services; the controller's or a third party's legitimate interests (unless overridden by the person's fundamental rights and freedoms); or credit protection."
+    check: "Every field or purpose in data-inventory.yaml names a lawful_basis that maps to one of the Art. 7 items."
+    inventory_keys: [fields.lawful_basis, fields.purpose]
+    source_url: "https://basedeconhecimento.cgu.gov.br/server/api/core/bitstreams/40c78348-6c8f-4cc7-a6f1-735feb35c7bc/content"
+    source_ref: "Art. 7, items I-X"
+  - id: sensitive-data
+    summary: "Sensitive personal data may be processed only in the cases listed in Art. 11: with the person's or legal guardian's specific and prominent consent for specific purposes, or without consent in listed cases such as legal or regulatory obligation (the other listed cases were not read in full)."
+    check: "Sensitive categories in the inventory have specific, prominent consent or a listed Art. 11 case."
+    inventory_keys: [fields.category]
+    source_url: "https://basedeconhecimento.cgu.gov.br/server/api/core/bitstreams/40c78348-6c8f-4cc7-a6f1-735feb35c7bc/content"
+    source_ref: "Art. 11, items I-II"
+  - id: transparency
+    summary: "People have easy access to clear, adequate and prominent information about processing, including the specific purpose, the form and duration of processing, and the identity of the controller (further items listed in Art. 9)."
+    check: "A privacy notice states the purpose, duration and the controller's identity."
+    inventory_keys: [fields.purpose, fields.retention]
+    source_url: "https://basedeconhecimento.cgu.gov.br/server/api/core/bitstreams/40c78348-6c8f-4cc7-a6f1-735feb35c7bc/content"
+    source_ref: "Art. 9, items I-III"
+  - id: data-protection-officer
+    summary: "The controller must appoint an encarregado (data protection officer) for personal data processing, and publish the officer's identity and contact information clearly, preferably on the controller's website. The officer takes complaints and communications from data subjects and gives clarifications."
+    check: "A named DPO/encarregado contact is published in the privacy notice."
+    source_url: "https://basedeconhecimento.cgu.gov.br/server/api/core/bitstreams/40c78348-6c8f-4cc7-a6f1-735feb35c7bc/content"
+    source_ref: "Art. 41, para. 1 and 2"
+  - id: security-measures
+    summary: "Processing agents must adopt technical and administrative security measures able to protect personal data from unauthorised access and from accidental or unlawful destruction, loss, alteration, communication or other improper processing. The ANPD may set minimum technical standards."
+    check: "Security phase findings show no open critical gaps for systems holding personal data."
+    source_url: "https://basedeconhecimento.cgu.gov.br/server/api/core/bitstreams/40c78348-6c8f-4cc7-a6f1-735feb35c7bc/content"
+    source_ref: "Art. 46, caput and para. 1"
+  - id: impact-report
+    summary: "The ANPD may require the controller to prepare a data protection impact report, including for sensitive data, describing data types collected, the collection and security methodology, and the controller's analysis of safeguards and risk mitigation."
+    check: "If the product processes sensitive data at scale, keep an impact assessment ready."
+    source_url: "https://basedeconhecimento.cgu.gov.br/server/api/core/bitstreams/40c78348-6c8f-4cc7-a6f1-735feb35c7bc/content"
+    source_ref: "Art. 38"
+breach_notification:
+  - id: notify-anpd-and-individuals
+    summary: "The controller must communicate to the ANPD and to the data subject a security incident that may cause relevant risk or damage to data subjects. Per the ANPD page the communication is due when, cumulatively, the incident is confirmed, involves personal data subject to the LGPD, and may cause relevant risk or damage to data subjects. The statute requires the notice to describe the nature of the data, the people involved, security measures used, risks, reasons for any delay, and mitigation measures."
+    deadline: "three working days (to the ANPD and to data subjects), unless a specific law sets another deadline; if information is incomplete it may be supplemented within twenty working days of the communication (ANPD page). The statute itself says 'a reasonable period as defined by the national authority' (Art. 48, para. 1)."
+    source_url: "https://www.gov.br/anpd/pt-br/canais_atendimento/agente-de-tratamento/comunicado-de-incidente-de-seguranca-cis"
+    source_ref: "Art. 48 (statute, https://basedeconhecimento.cgu.gov.br/server/api/core/bitstreams/40c78348-6c8f-4cc7-a6f1-735feb35c7bc/content); ANPD security-incident communication page"
+user_rights:
+  - id: art-18-rights
+    summary: "At any time, on request, the data subject may obtain: confirmation of processing; access; correction of incomplete, inaccurate or outdated data; anonymisation, blocking or deletion of unnecessary, excessive or unlawfully processed data; portability; deletion of data processed with consent; information on entities with which data were shared; information on the possibility of refusing consent and its consequences; and withdrawal of consent. The person may complain to the national authority and may object to processing that dispenses with consent when the law is breached."
+    source_url: "https://basedeconhecimento.cgu.gov.br/server/api/core/bitstreams/40c78348-6c8f-4cc7-a6f1-735feb35c7bc/content"
+    source_ref: "Art. 18, items I-IX and paras. 1-2"
+  - id: confirmation-and-access
+    summary: "Confirmation of processing or access to data is provided in a simplified format immediately, or by a clear and complete declaration (origin of data, absence of record, criteria used and purpose) within up to 15 days of the request."
+    response_deadline: "immediately (simplified format) or up to 15 days (full declaration)"
+    source_url: "https://basedeconhecimento.cgu.gov.br/server/api/core/bitstreams/40c78348-6c8f-4cc7-a6f1-735feb35c7bc/content"
+    source_ref: "Art. 19, items I-II"
+consent:
+  - id: form-and-burden
+    summary: "Consent must be given in writing or by another means showing the person's will; if written, it must be in a clause highlighted from the other contract clauses. The controller bears the burden of proving valid consent. Consent obtained with a defect is invalid, and generic authorisations are void: consent must refer to specified purposes."
+    source_url: "https://basedeconhecimento.cgu.gov.br/server/api/core/bitstreams/40c78348-6c8f-4cc7-a6f1-735feb35c7bc/content"
+    source_ref: "Art. 8, caput and paras. 1-4"
+  - id: easy-revocation
+    summary: "Consent can be revoked at any time by express statement of the person, through a free and facilitated procedure; processing done earlier under the consent stays valid until deletion is requested."
+    source_url: "https://basedeconhecimento.cgu.gov.br/server/api/core/bitstreams/40c78348-6c8f-4cc7-a6f1-735feb35c7bc/content"
+    source_ref: "Art. 8, para. 5"
+children:
+  - id: children-and-adolescents
+    summary: "Processing of data of children and adolescents must be in their best interest. For children, processing needs specific and prominent consent from at least one parent or legal guardian; controllers must publicly state the data types collected, how they are used and how to exercise Art. 18 rights, must make all reasonable efforts to verify that the parent consented, and may not condition participation in games or internet applications on data beyond what is strictly necessary. Limited exceptions: contacting the parent (used once, not stored) or protecting the child, and never passing the data on without consent. This text does not define the age of a child."
+    age: "children (the statute text read does not define the age; see not_covered)"
+    source_url: "https://basedeconhecimento.cgu.gov.br/server/api/core/bitstreams/40c78348-6c8f-4cc7-a6f1-735feb35c7bc/content"
+    source_ref: "Art. 14, caput and paras. 1-6"
+penalties_note:
+  summary: "Administrative sanctions by the ANPD include a warning with a deadline for corrective measures; a simple fine of up to 2% of the revenue of the private legal entity, group or conglomerate in Brazil in its last fiscal year, excluding taxes, limited in total to BRL 50,000,000 per infraction; a daily fine within the same cap; publicisation of the infraction; blocking of the data; and deletion of the data."
+  source_url: "https://basedeconhecimento.cgu.gov.br/server/api/core/bitstreams/40c78348-6c8f-4cc7-a6f1-735feb35c7bc/content"
+  source_ref: "Art. 52, items I-VI"
+not_covered:
+  - "Age that defines a 'child' versus an 'adolescent' (the Estatuto da Crianca e do Adolescente, Lei 8.069/1990), and the newer children's digital law (ECA Digital): not verified from an official source this session."
+  - "Art. 33 international transfer conditions, Art. 37 records of processing, Art. 6 principles in full, and the full Art. 11 and Art. 7 sub-conditions: not verified in detail from an official source this session."
+  - "ANPD regulations other than the security-incident communication (including the regulation for small processing agents and sanction calculation rules): not verified from an official source this session; the ANPD page read did not mention doubled deadlines for small agents."
+  - "Amendments to Lei 13.709 after the 2019-dated compiled copy read: not verified from an official source this session."
+  - "Brazilian cookie, marketing and consumer law (Marco Civil da Internet, Codigo de Defesa do Consumidor): not verified from an official source this session."
+lawyer_questions:
+  - "Which Art. 7 or Art. 11 basis is right for each of our processing purposes, especially legitimate interests?"
+  - "How is a child defined for our users, and how do we verify parental consent?"
+  - "Do we need an in-country representative or a documented encarregado, and what do current ANPD rules require?"
+  - "What is our process to report an incident to the ANPD and to users within three working days?"
+  - "Which international transfer mechanism do we use for data leaving Brazil?"

@@ -1,0 +1,140 @@
+# UK GDPR and Data Protection Act 2018 (with PECR cookie and marketing rules). Curated by release-gate from official sources only.
+# Thresholds and rules change. Verify against the official source before relying on this.
+id: uk-gdpr
+name: "United Kingdom General Data Protection Regulation (retained Regulation (EU) 2016/679) and Data Protection Act 2018"
+short_name: UK GDPR
+jurisdiction: UK
+source_url: "https://www.legislation.gov.uk/eur/2016/679/contents"
+last_verified: 2026-10-18
+applicability:
+  triggers:
+    - id: established-in-uk
+      description: "Personal data is processed in the context of the activities of a controller's or processor's UK establishment, wherever the processing takes place."
+      config_predicate: {jurisdictions_any: [uk]}
+      source_url: "https://www.legislation.gov.uk/eur/2016/679/article/3"
+      source_ref: "Art. 3(1)"
+    - id: targets-people-in-uk
+      description: "A controller or processor not established in the UK processes data of people in the UK to offer them goods or services (paid or free) or to monitor their behaviour as far as it takes place in the UK."
+      config_predicate: {jurisdictions_any: [uk]}
+      source_url: "https://www.legislation.gov.uk/eur/2016/679/article/3"
+      source_ref: "Art. 3(2)"
+  notes: "The legislation.gov.uk text is a revised version that already reflects amendments by the Data (Use and Access) Act 2025 (several provisions show 2026 changes). Re-check the live pages before relying on any detail."
+obligations:
+  - id: lawful-basis
+    summary: "Every processing purpose needs a lawful basis under Art. 6(1): consent, contract, legal obligation, vital interests, public task, legitimate interests, or the newer recognised legitimate interests basis (6(1)(ea)), which only applies if an Annex 1 condition is met (the Annex 1 conditions were not read this session)."
+    check: "Every field or purpose in data-inventory.yaml names a lawful_basis."
+    inventory_keys: [fields.lawful_basis, fields.purpose]
+    source_url: "https://www.legislation.gov.uk/eur/2016/679/article/6"
+    source_ref: "Art. 6(1), 6(5)"
+  - id: records-of-processing
+    summary: "Controllers and processors keep a written (electronic is fine) record of processing. Organisations with fewer than 250 staff are generally excused unless the processing is likely to risk people's rights and freedoms, is not occasional, or includes special-category or criminal-offence data."
+    check: "A processing record exists and matches data-inventory.yaml."
+    inventory_keys: [fields.purpose, fields.recipients, fields.retention, fields.transfers]
+    source_url: "https://www.legislation.gov.uk/eur/2016/679/article/30"
+    source_ref: "Art. 30"
+  - id: security-of-processing
+    summary: "Controllers and processors choose security measures suited to the risk, weighing current technology, cost and the nature of the processing. Examples: encryption, pseudonymisation, resilience, prompt recovery, and regular testing."
+    check: "Security phase findings show no open critical gaps for systems holding personal data."
+    source_url: "https://www.legislation.gov.uk/eur/2016/679/article/32"
+    source_ref: "Art. 32(1)"
+  - id: dpia
+    summary: "A data protection impact assessment is required before processing likely to be high risk. Art. 35(3) names: systematic extensive profiling with significant effects, large-scale special-category or criminal-offence data, and large-scale systematic monitoring of public areas."
+    check: "If the inventory shows profiling, large-scale special-category data or large-scale monitoring, a DPIA is referenced."
+    inventory_keys: [fields.category, fields.profiling]
+    source_url: "https://www.legislation.gov.uk/eur/2016/679/article/35"
+    source_ref: "Art. 35(1), 35(3)"
+  - id: dpo
+    summary: "A data protection officer must be designated if the controller or processor is a public authority, or its core activities involve large-scale regular and systematic monitoring of people, or large-scale special-category or criminal-offence data."
+    check: "Ask whether any Art. 37(1) trigger applies; if so a DPO contact is published."
+    source_url: "https://www.legislation.gov.uk/eur/2016/679/article/37"
+    source_ref: "Art. 37(1)"
+  - id: uk-representative
+    summary: "A controller or processor that falls under Art. 3(2) without a UK establishment must appoint a UK-based representative in writing."
+    check: "Non-UK product with UK users: a named UK representative appears in the privacy notice."
+    source_url: "https://www.legislation.gov.uk/eur/2016/679/article/27"
+    source_ref: "Art. 27"
+  - id: pecr-device-access-consent
+    summary: "Under PECR regulation 6 (as substituted in February 2026), nobody may store information on, or read information from, a user's device unless an exception in Schedule A1 applies. Schedule A1 covers: consent after clear and comprehensive information; transmission of a communication; storage or access strictly necessary for a service the user requested; statistical purposes (sole aim is improving the service, clear information, a simple free way to object, and no passive collection of emitted data); website appearance or functionality (clear information and a simple free way to object); and emergency location assistance."
+    check: "Cookie and storage audit: each cookie or SDK identifier maps to one Schedule A1 exception or is blocked until the user consents."
+    inventory_keys: [cookies, trackers]
+    source_url: "https://www.legislation.gov.uk/uksi/2003/2426/regulation/6"
+    source_ref: "PECR reg. 6; Schedule A1 paras. 2-7 (https://www.legislation.gov.uk/uksi/2003/2426/schedule/A1)"
+  - id: pecr-advertising-needs-consent
+    summary: "The ICO says no exception covers online advertising; consent is needed for any advertising-related use (for example frequency capping, ad measurement, fingerprinting for ads). It also lists cross-site or cross-device tracking as unlikely to qualify as strictly necessary."
+    check: "Advertising, ad-measurement and cross-site tracking cookies are off until the user opts in."
+    inventory_keys: [cookies, trackers]
+    source_url: "https://ico.org.uk/for-organisations/direct-marketing-and-privacy-and-electronic-communications/guidance-on-the-use-of-storage-and-access-technologies/what-are-the-exceptions/"
+    source_ref: "ICO guidance: What are the exceptions?"
+  - id: pecr-email-marketing
+    summary: "Unsolicited direct marketing email needs the recipient's prior agreement (PECR reg. 22(2)), unless the soft opt-in applies (reg. 22(3)): details were obtained in a sale or negotiation, only the sender's own similar products or services are promoted, and the recipient was offered a simple free way to refuse at collection and in every message."
+    check: "Marketing email list records an opt-in or documents the soft opt-in conditions; each email has a working unsubscribe."
+    inventory_keys: [fields.marketing_consent]
+    source_url: "https://www.legislation.gov.uk/uksi/2003/2426/regulation/22"
+    source_ref: "PECR reg. 22(2), 22(3)"
+breach_notification:
+  - id: notify-regulator
+    summary: "Notify the regulator without undue delay and, where feasible, not later than 72 hours after becoming aware, unless the breach is unlikely to risk people's rights and freedoms. A late notice gives reasons. The notice covers the nature of the breach (categories and approximate numbers), a contact point, likely consequences and measures taken. The current UK text names the recipient 'the Commission'."
+    deadline: "72 hours after becoming aware, where feasible (Art. 33(1))"
+    source_url: "https://www.legislation.gov.uk/eur/2016/679/article/33"
+    source_ref: "Art. 33(1), 33(3)"
+  - id: notify-individuals
+    summary: "Tell affected people without undue delay when the breach is likely to result in a high risk to their rights and freedoms."
+    deadline: "without undue delay (Art. 34(1))"
+    source_url: "https://www.legislation.gov.uk/eur/2016/679/article/34"
+    source_ref: "Art. 34(1)"
+user_rights:
+  - id: access
+    summary: "Right to confirmation that data is processed, a copy, and supporting information (purposes, categories, recipients, retention, sources, safeguards for transfers). The person is entitled to what a reasonable and proportionate search finds (para. 1A)."
+    source_url: "https://www.legislation.gov.uk/eur/2016/679/article/15"
+    source_ref: "Art. 15"
+  - id: rectification
+    summary: "Right to have inaccurate data corrected without undue delay and incomplete data completed."
+    source_url: "https://www.legislation.gov.uk/eur/2016/679/article/16"
+    source_ref: "Art. 16"
+  - id: erasure
+    summary: "Right to erasure on grounds including: data no longer needed, consent withdrawn with no other basis, successful objection, unlawful processing, legal obligation, or data collected from a child for online services under Art. 8(1)."
+    source_url: "https://www.legislation.gov.uk/eur/2016/679/article/17"
+    source_ref: "Art. 17(1)"
+  - id: portability
+    summary: "Where processing relies on consent or a contract and is automated, people can get their data in a commonly used machine-readable format and have it sent to another controller where technically possible."
+    source_url: "https://www.legislation.gov.uk/eur/2016/679/article/20"
+    source_ref: "Art. 20"
+  - id: object
+    summary: "Right to object to processing based on legitimate interests or public task; for direct marketing the objection is absolute and processing for that purpose must stop."
+    source_url: "https://www.legislation.gov.uk/eur/2016/679/article/21"
+    source_ref: "Art. 21(1)-(3)"
+consent:
+  - id: demonstrable
+    summary: "The controller must be able to show that consent was given; a consent request inside a wider document must be clearly separate and in plain language."
+    source_url: "https://www.legislation.gov.uk/eur/2016/679/article/7"
+    source_ref: "Art. 7(1), 7(2)"
+  - id: easy-withdrawal
+    summary: "People can withdraw consent at any time, must be told so before consenting, and withdrawal must be no harder than giving consent."
+    source_url: "https://www.legislation.gov.uk/eur/2016/679/article/7"
+    source_ref: "Art. 7(3)"
+  - id: no-bundling
+    summary: "When judging whether consent is freely given, account is taken of whether a contract or service depends on consent to processing it does not need."
+    source_url: "https://www.legislation.gov.uk/eur/2016/679/article/7"
+    source_ref: "Art. 7(4)"
+children:
+  - id: info-society-consent-age
+    summary: "Where consent is the basis and an information society service is offered directly to a child, processing is lawful if the child is at least 13; for younger children a person with parental responsibility must give or approve consent, and the controller makes reasonable efforts to verify that. The Secretary of State may change the age within 13 to 16."
+    age: "13"
+    source_url: "https://www.legislation.gov.uk/eur/2016/679/article/8"
+    source_ref: "Art. 8(1), 8(2), 8(2A)"
+penalties_note:
+  summary: "Under Art. 83 and Data Protection Act 2018 s. 157: standard maximum is GBP 8,700,000 or, for an undertaking, 2% of total annual worldwide turnover of the preceding financial year if higher; higher maximum is GBP 17,500,000 or, for an undertaking, 4% if higher."
+  source_url: "https://www.legislation.gov.uk/ukpga/2018/12/section/157"
+  source_ref: "DPA 2018 s. 157(5), 157(6); UK GDPR Art. 83(4), 83(5)"
+not_covered:
+  - "Response deadline for data subject requests: Art. 12(3) now points to Art. 12A, which could not be fetched this session; not verified from an official source this session."
+  - "Rights in Arts. 18, 19 and 22-22D, and Art. 13/14 transparency details: not fetched this session."
+  - "Data Protection Act 2018 Part 2 exemptions and the age-appropriate design code: not verified from an official source this session."
+  - "International transfer rules (UK adequacy regulations, IDTA, UK Addendum): not verified from an official source this session."
+  - "PECR breach reporting for communications providers and PECR fines: not verified from an official source this session."
+  - "Children's code and Online Safety Act duties: not verified from an official source this session."
+lawyer_questions:
+  - "Which Schedule A1 PECR exception, if any, covers each of our analytics and preference cookies?"
+  - "Do we need a UK representative, and who is the right regulator contact for breach reports?"
+  - "Does the new recognised legitimate interests basis apply to any of our processing?"
+  - "Do our services fall under the age-appropriate design code or the Online Safety Act?"

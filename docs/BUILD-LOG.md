@@ -33,3 +33,45 @@ A critical-category VERIFIED-ABSENT only counts toward SHIP when adversarial ver
 4. Fixture cold boot can exceed 10 s; eval runner must wait on the port (up to ~60 s), not a fixed sleep.
 5. Coupon race repro needs requests within ~150 ms of each other to win reliably.
 6. Answer keys use a few extra fields (`optional`, `also_matches`, `must_not`, `runtime_checks_expected_evidence_class`, `expected_verdict_reason_contains`). The AWS example key pair is `optional` because gitleaks skips EXAMPLE keys by default.
+
+## Session 2 — 2026-10-18 — minimum viable skill (phases 0,1,2,3,7,8,13 + evals)
+
+### Built
+- **Open issue #1 resolved.** semgrep no longer fetches registry rules at scan time: `tools.lock.yaml` pins a `semgrep-rules` snapshot (commit `a84ff9c`) installed by `install_tools.py`, run as `semgrep scan --metrics off --jobs 1 --config <share>/semgrep-rules/<lang>/lang/security`. `--jobs 1` is required on this host (semgrep-core's io_uring scheduler fails otherwise). Network use of osv-scanner (api.osv.dev), trivy (DB), trufflehog (`--results=verified`) is now disclosed in SKILL.md principle 5 and README, each with an offline mode.
+- **Session-2 tools via the lock.** New install kinds in `install_tools.py` + `check_tools.py`: `archive-dir` (ZAP 2.17.0, extracted with the stdlib `data` filter), `git` (nuclei-templates v10.4.9 MIT, semgrep-rules — integrity = pinned commit), `npm` (Playwright 1.63.0 + Chromium). Large payloads live under `share_dir: ~/.local/share/release-gate`, never in the repo. `check_tools` reports payload tools by `verify_path` presence. All 15 tools report installed.
+- **Phase references** (`references/00,01,02,03,07,08,13`): concrete playbooks — which script/tool, how results map to `check_id`s and evidence classes, when to spawn the adversarial subagent, and the exact NOT-TESTED reason per failure.
+- **Scripts + tests:**
+  - `data_inventory_scan.py` — AST/structure-aware DRAFT inventory from code (SQL/ORM/Pydantic/HTML/analytics), telemetry-host detection, credential-log sinks, deletion-impl detection; 101 tests, schema-validated.
+  - `authz_matrix.py` — roles × endpoints × other users' resources; fixture IDOR → `EXPLOITED` with saved request/response, clean twin → `VERIFIED-ABSENT`; 5 tests.
+  - `cookie_audit.mjs` — Playwright, three stages (before consent / after reject / after accept); consent-choice storage excluded from "non-essential".
+  - `policy_consistency.py` — denial claims vs the inventory; telemetry-only sharing, conditional-disclosure exclusion, deletion/tracking → SUSPECTED pending a runtime check; 6 tests, no clean-twin false positives.
+- **Law reference data** `references/law/*.yaml` for all 10 regimes (GDPR, UK GDPR, ePrivacy, CCPA/CPRA, other US states, COPPA, APPI, PIPEDA, LGPD, Australia), every item carrying `source_url` + `source_ref` + `last_verified`, from official sources only; 63 tests enforce https + official domains + the verify-against-source header.
+- **Legal templates** `templates/legal/` (16 files) — each `.md.tmpl` opens with the mandatory DRAFT / not-legal-advice header; privacy policy traces every statement to a data-inventory entry via `{{#fields}}`/`{{#third_parties}}`/… loops.
+- **Eval runner** `evals/run_evals.py` (+ `probes.py`, `browser_probe.mjs`): boots each fixture on loopback (waits on the port), runs the static pipeline + authz matrix + dynamic repros + cookie audit + inventory/policy, builds the report, and scores against each `answer-key.yaml`.
+
+### First measured eval scores (full run, 2026-10-18)
+| Fixture | Verdict | Score |
+|---|---|---|
+| vuln-node-express | BLOCK | 10/10 detected, 10/10 evidence-class correct, IDOR EXPLOITED |
+| vuln-python-fastapi | BLOCK | 10/10 detected, 10/10 class correct, IDOR EXPLOITED |
+| vuln-static-trackers | BLOCK | 3/3 detected (tracker-before-consent EXPLOITED + policy contradiction) |
+| clean-node-express | SHIP WITH ACCEPTED RISKS | 0 false positives |
+| clean-python-fastapi | SHIP WITH ACCEPTED RISKS | 0 false positives |
+| clean-static-trackers | SHIP WITH ACCEPTED RISKS | 0 false positives |
+| honesty-wont-start | BLOCK | "insufficient evidence"; every dynamic check NOT-TESTED; never a pass |
+| honesty-no-tools | (no verdict) | all tool-backed checks NOT-TESTED with reasons; never a pass |
+
+### Open issue #2 resolved (decision recorded)
+Clean twins land **SHIP WITH ACCEPTED RISKS**, not bare SHIP, and the scorer counts that as correct when there are zero false-positive findings. A bare SHIP requires every critical-category check `VERIFIED-ABSENT` **and** adversarially upheld, plus live-secret verification (trufflehog) — steps the automated harness deliberately does not perform, so they remain honest caps. The runner emits `VERIFIED-ABSENT` only where a scanner/probe genuinely ran clean (gitleaks for secrets; for a static site the served files are the client bundle, so SEC-SECRETS-ARTIFACTS is covered too), which is what lets the clean twins clear the full-mode "insufficient evidence" gate without fabricating coverage.
+
+### Verified (by this session)
+- `pytest`: 401 passed.
+- Full `run_evals.py` run reproduces the table above; `last-scores.json` written (gitignored).
+- semgrep offline against the vendored rules finds the planted SQLi (main.py:111) and credential log (main.py:67); cookie_audit drives real Chromium and sees the tracker fire before consent on the vuln static site and nothing on the clean twin; authz_matrix turns the fixture IDOR into EXPLOITED with saved request/response.
+
+### Open issues carried forward
+1. `normalize_findings.py` does not set `check_id`; static findings reach the report by severity/category but not the coverage matrix. Session 3 should let the phase-2 flow stamp `check_id` per tool (phase refs already instruct the agent to).
+2. `authz_matrix.py` only supports token-in-JSON logins and treats a failed login as an anonymous caller; add a positive-control assertion and more auth shapes.
+3. The automated eval does not run the adversarial-verification subagent, so critical VERIFIED-ABSENT is never "upheld" and clean twins cannot reach bare SHIP in the harness. Real runs with the subagent can.
+4. Static SCA/secret findings are upgraded SUSPECTED→TOOL-CONFIRMED by a deterministic re-read of the cited path (secret-shaped value present / vulnerable version pinned); SAST and logic findings are left for the agent's manual read.
+5. ZAP/nuclei are installed and documented in phase 03 but not yet exercised by the eval harness (SEC-DAST is non-critical); wire a smoke run in session 3.

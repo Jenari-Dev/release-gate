@@ -1,0 +1,17 @@
+# DRAFT — not legal advice; review before publishing.
+# Template for /.well-known/security.txt (RFC 9116). Replace every {{PLACEHOLDER}},
+# delete the lines you do not use, and delete these comment lines before publishing.
+# Serve over HTTPS at https://{{DOMAIN}}/.well-known/security.txt as text/plain; charset=utf-8.
+# Contact and Expires are required. Expires must be in the future and under a year out
+# (renew it before it passes). Contact may repeat; use mailto:, https: or tel: URIs.
+# Only list promises you will keep. Verify the field rules against RFC 9116 itself.
+
+Contact: mailto:{{SECURITY_CONTACT_EMAIL}}
+Expires: {{EXPIRES_ISO8601}}
+Preferred-Languages: {{PREFERRED_LANGUAGES}}
+Canonical: https://{{DOMAIN}}/.well-known/security.txt
+Policy: {{VDP_URL}}
+# Optional fields (uncomment if used):
+# Encryption: {{PGP_KEY_URL}}
+# Acknowledgments: {{ACKNOWLEDGMENTS_URL}}
+# Hiring: {{SECURITY_JOBS_URL}}

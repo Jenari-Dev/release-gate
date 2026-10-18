@@ -1,0 +1,15 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Patient {
+  id        Int      @id
+  email     String
+  diagnosis String
+  posts     Post[]
+}
+
+model Post {
+  id Int @id
+}

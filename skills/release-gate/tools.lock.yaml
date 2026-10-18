@@ -6,6 +6,7 @@ schema_version: 1
 install_dir: ~/.local/share/release-gate/bin
 venv_dir: ~/.local/share/release-gate/venv
 venv_python: "3.12"          # uv-managed CPython; semgrep/checkov are validated on 3.12, not 3.14
+share_dir: ~/.local/share/release-gate          # larger payloads (ZAP, nuclei templates, semgrep rules, node) live here, never in the repo
 tools:
   gitleaks:
     kind: binary
@@ -95,3 +96,62 @@ tools:
     package: checkov
     version_cmd: ["checkov", "--version"]
     version_regex: "(\\d+\\.\\d+\\.\\d+)"
+  nuclei:
+    kind: binary
+    version: "3.11.1"
+    category: dast
+    version_cmd: ["nuclei", "-version"]
+    version_regex: "(\\d+\\.\\d+\\.\\d+)"
+    source: https://github.com/projectdiscovery/nuclei/releases/download/v3.11.1/nuclei_3.11.1_linux_amd64.zip
+    sha256: ea63d4ae232808cd7c6bc00d0142428e231fab59dae01042246097d195835ab6
+    checksums_url: https://github.com/projectdiscovery/nuclei/releases/download/v3.11.1/nuclei_3.11.1_checksums.txt
+    archive_member: nuclei
+  zap:
+    kind: archive-dir
+    version: "2.17.0"
+    category: dast
+    # ZAP needs a JRE; this box has OpenJDK 21. ZAP is only used for the non-critical SEC-DAST check.
+    source: https://github.com/zaproxy/zaproxy/releases/download/v2.17.0/ZAP_2.17.0_Linux.tar.gz
+    sha256: efe799aaa3627db683b43f00c9c210aea0b75c00cc8f0a0f0434d12bb3ddde5a
+    # ZAP lists SHA-256 only in its release-notes table, not a checksums file; the pin above also
+    # matches GitHub's published asset digest. The downloaded file is still verified against it.
+    checksum_source: computed-local
+    install_root: zap
+    verify_path: zap/ZAP_2.17.0/zap.sh
+    exe_rel: zap/ZAP_2.17.0/zap.sh
+    version_cmd: ["zap.sh", "-version", "-cmd"]
+    version_regex: "(\\d+\\.\\d+\\.\\d+)"
+  nuclei-templates:
+    kind: git
+    version: "v10.4.9"
+    category: dast
+    # Integrity pin is the commit sha, verified after checkout. MIT-licensed, so safe to redistribute,
+    # but still fetched at install time (pinned), never committed to this repo.
+    source: https://github.com/projectdiscovery/nuclei-templates.git
+    commit: 893122ffce8ebf8e264f15d2cd3960cb1dd36d6c
+    license: MIT
+    install_root: nuclei-templates
+    verify_path: nuclei-templates/.nuclei-ignore
+  semgrep-rules:
+    kind: git
+    version: "a84ff9c"
+    category: sast
+    # Resolves open issue #1: semgrep --config p/default fetches rules from the registry at runtime.
+    # Instead we pin this snapshot (verified by commit sha) and run semgrep --config <local> --metrics off.
+    # License: "Semgrep Rules License v1.0" (semgrep.dev/legal/rules-license) — NOT redistributed in this
+    # repo; fetched at install time into share_dir and git-ignored. Reviewed before use as untrusted data.
+    source: https://github.com/semgrep/semgrep-rules.git
+    commit: a84ff9cc2453ca91d581380de4b8b3f272f6f4be
+    license: "Semgrep Rules License v1.0"
+    install_root: semgrep-rules
+    verify_path: semgrep-rules/README.md
+  playwright:
+    kind: npm
+    version: "1.63.0"
+    category: privacy
+    # Drives cookie_audit.mjs. Installed into share_dir/node with its pinned Chromium; both fetched at
+    # install time. npm resolves transitive deps itself (not hash-pinned), same policy as the pip tools.
+    package: playwright
+    install_root: node
+    browser: chromium
+    verify_path: node/node_modules/playwright/package.json

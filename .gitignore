@@ -11,4 +11,6 @@ evals/fixtures/*/data/*.db
 evals/fixtures/*/*.db
 evals/results/
 # per-project state when release-gate scans itself
+.release-gate/
 .release-gate/evidence/
+evals/last-scores.json

@@ -1,0 +1,129 @@
+# California Consumer Privacy Act of 2018 as amended by the CPRA (Cal. Civ. Code 1798.100 et seq.). Curated by release-gate from official sources only.
+# Thresholds and rules change. Verify against the official source before relying on this.
+id: ccpa-cpra
+name: "California Consumer Privacy Act of 2018 (CCPA), as amended by the California Privacy Rights Act (CPRA)"
+short_name: CCPA/CPRA
+jurisdiction: US-CA
+source_url: "https://cppa.ca.gov/regulations/pdf/cppa_act.pdf"
+last_verified: 2026-10-18
+applicability:
+  triggers:
+    - id: for-profit-business-in-california
+      description: "A for-profit entity that collects consumers' personal information, determines the purposes and means of processing, does business in California, and meets ONE of: (A) gross annual revenue above USD 25,000,000 in the preceding calendar year (statute base figure, adjusted periodically); (B) alone or in combination annually buys, sells or shares the personal information of 100,000 or more consumers or households; (C) derives 50 percent or more of annual revenue from selling or sharing consumers' personal information."
+      config_predicate: {jurisdictions_any: [us-ca]}
+      source_url: "https://cppa.ca.gov/regulations/pdf/cppa_act.pdf"
+      source_ref: "Civ. Code 1798.140(d)(1)(A)-(C)"
+    - id: adjusted-revenue-figure
+      description: "The CPPA's FAQ states the revenue threshold as USD 26,625,000 or more for the preceding calendar year, effective January 1, 2025. The statute says the figure is adjusted under 1798.199.95; the next adjustment was not checked, so confirm the current figure."
+      source_url: "https://cppa.ca.gov/faq.html"
+      source_ref: "CPPA FAQ, business applicability"
+  notes: "Nonprofits and government agencies are generally not covered, per the CPPA FAQ. The statute PDF read is the CPPA-posted version labelled effective 7/15/2024 (AB 3286 update); later amendments (2025-2026 bills) were not checked. The CPPA is the administrative enforcer; the Attorney General also enforces."
+obligations:
+  - id: notice-at-collection
+    summary: "At or before collection, tell consumers the categories of personal information (and sensitive personal information) collected, the purposes, whether it is sold or shared, and how long each category is kept (or the criteria for deciding). Do not collect more categories or use data for incompatible purposes without new notice."
+    check: "A notice at collection / privacy policy exists and lists categories, purposes, sale/share status and retention that match data-inventory.yaml."
+    inventory_keys: [fields.category, fields.purpose, fields.retention, fields.shared_with]
+    source_url: "https://cppa.ca.gov/regulations/pdf/cppa_act.pdf"
+    source_ref: "Civ. Code 1798.100(a)"
+  - id: data-minimisation
+    summary: "Collection, use, retention and sharing must be reasonably necessary and proportionate to the disclosed purposes or a compatible purpose."
+    check: "Each field in the inventory maps to a stated purpose; retention is set; no field is collected only 'in case'."
+    inventory_keys: [fields.purpose, fields.retention]
+    source_url: "https://cppa.ca.gov/regulations/pdf/cppa_act.pdf"
+    source_ref: "Civ. Code 1798.100(c)"
+  - id: contracts-with-recipients
+    summary: "When selling or sharing personal information to a third party, or disclosing it to a service provider or contractor for a business purpose, the business must have an agreement limiting use to specified purposes and requiring the recipient to give the same level of privacy protection."
+    check: "Every processor or third party in data-inventory.yaml has a contract on file that includes purpose limits."
+    inventory_keys: [fields.shared_with, fields.recipients]
+    source_url: "https://cppa.ca.gov/regulations/pdf/cppa_act.pdf"
+    source_ref: "Civ. Code 1798.100(d)"
+  - id: request-channels
+    summary: "Offer two or more designated methods to submit access/deletion/correction requests, including at minimum a toll-free phone number; a business that operates exclusively online and has a direct relationship with the consumer need only provide an email address. If the business has a website, requests must be possible through it."
+    check: "Privacy policy lists a request method (email address for online-only businesses) and a web form or page."
+    source_url: "https://cppa.ca.gov/regulations/pdf/cppa_act.pdf"
+    source_ref: "Civ. Code 1798.130(a)(1)"
+  - id: opt-out-links
+    summary: "A business that sells or shares personal information, or uses sensitive personal information beyond the permitted purposes, must provide clear and conspicuous homepage links titled 'Do Not Sell or Share My Personal Information' and 'Limit the Use of My Sensitive Personal Information', or one combined link. The CPPA FAQ also lists the alternative labels 'Your Privacy Choices' and 'Your California Privacy Choices'."
+    check: "If the cookie/tracker audit finds sale or sharing (cross-context behavioural advertising), the homepage footer link exists and the opt-out works."
+    inventory_keys: [cookies, trackers, fields.shared_with]
+    source_url: "https://cppa.ca.gov/regulations/pdf/cppa_act.pdf"
+    source_ref: "Civ. Code 1798.135(a)(1)-(3); CPPA FAQ for label alternatives (https://cppa.ca.gov/faq.html)"
+  - id: honour-opt-out-signals
+    summary: "Businesses must honour opt-out preference signals that meet the requirements, such as the Global Privacy Control, as a request to opt out of sale or sharing (per the CPPA FAQ)."
+    check: "With a GPC signal present, advertising and cross-context trackers do not fire."
+    inventory_keys: [cookies, trackers]
+    source_url: "https://cppa.ca.gov/faq.html"
+    source_ref: "CPPA FAQ, opt-out preference signals"
+  - id: act-on-opt-out
+    summary: "Act on opt-out requests as soon as feasibly possible and no later than 15 business days after receipt; after an opt-out the business may not sell or share unless the consumer later consents."
+    check: "The opt-out flow actually stops sharing; documented processing time is within 15 business days."
+    source_url: "https://cppa.ca.gov/faq.html"
+    source_ref: "CPPA FAQ, opt-out requests"
+  - id: no-retaliation
+    summary: "Consumers must not be retaliated against for exercising their rights (Civ. Code 1798.125, title verified; details not read)."
+    check: "No feature or price change is tied to exercising a privacy right without a documented legal basis."
+    source_url: "https://cppa.ca.gov/regulations/pdf/cppa_act.pdf"
+    source_ref: "Civ. Code 1798.125"
+breach_notification:
+  - id: private-right-of-action
+    summary: "The CCPA does not set a breach-notification deadline. It gives consumers a private right of action where nonencrypted personal information (as defined by reference to Civ. Code 1798.81.5) or an email address plus password/security answer is exposed through unauthorised access and exfiltration, theft or disclosure caused by the business's failure to keep reasonable security. Statutory damages are USD 100 to USD 750 per consumer per incident (or actual damages if greater), adjusted under 1798.199.95; the consumer must give 30 days written notice and the business may cure."
+    deadline: "No CCPA notification deadline. 30-day written notice and cure window applies before statutory-damages suits (1798.150(b))."
+    source_url: "https://cppa.ca.gov/regulations/pdf/cppa_act.pdf"
+    source_ref: "Civ. Code 1798.150(a), 1798.150(b)"
+user_rights:
+  - id: know-access
+    summary: "Right to know what personal information is collected and to access it, and to know what is sold or shared and to whom (Civ. Code 1798.110, 1798.115). Information is delivered free of charge (1798.130(a)(2)(A))."
+    response_deadline: "45 days from a verifiable request, extendable once by 45 more days with notice in the first 45 days (1798.130(a)(2)(A))"
+    source_url: "https://cppa.ca.gov/regulations/pdf/cppa_act.pdf"
+    source_ref: "Civ. Code 1798.110, 1798.115, 1798.130(a)(2)(A)"
+  - id: delete
+    summary: "Right to delete personal information, subject to exceptions."
+    response_deadline: "45 days, extendable once by 45 days (1798.130(a)(2)(A))"
+    source_url: "https://cppa.ca.gov/regulations/pdf/cppa_act.pdf"
+    source_ref: "Civ. Code 1798.105"
+  - id: correct
+    summary: "Right to correct inaccurate personal information."
+    response_deadline: "45 days, extendable once by 45 days (1798.130(a)(2)(A))"
+    source_url: "https://cppa.ca.gov/regulations/pdf/cppa_act.pdf"
+    source_ref: "Civ. Code 1798.106"
+  - id: opt-out-sale-share
+    summary: "Right at any time to direct a business not to sell or share personal information."
+    response_deadline: "as soon as feasibly possible, no later than 15 business days (CPPA FAQ)"
+    source_url: "https://cppa.ca.gov/regulations/pdf/cppa_act.pdf"
+    source_ref: "Civ. Code 1798.120(a)"
+  - id: limit-sensitive
+    summary: "Right to limit use and disclosure of sensitive personal information to what is necessary to provide the goods or services reasonably expected by an average consumer, plus listed purposes."
+    source_url: "https://cppa.ca.gov/regulations/pdf/cppa_act.pdf"
+    source_ref: "Civ. Code 1798.121(a)"
+  - id: non-discrimination
+    summary: "Right to equal treatment after exercising CCPA rights (listed by the CPPA FAQ and the OAG page)."
+    source_url: "https://cppa.ca.gov/faq.html"
+    source_ref: "CPPA FAQ, consumer rights"
+consent:
+  - id: opt-in-for-minors-sale
+    summary: "A business must not sell or share the personal information of consumers it has actual knowledge are under 16 unless the consumer (aged 13 to under 16) or the parent/guardian (under 13) has affirmatively authorised it. Wilfully disregarding age counts as actual knowledge."
+    source_url: "https://cppa.ca.gov/regulations/pdf/cppa_act.pdf"
+    source_ref: "Civ. Code 1798.120(c)"
+children:
+  - id: under-16-sale-opt-in
+    summary: "Opt-in is required before selling or sharing data of known consumers under 16: the teen's own authorisation for ages 13 to under 16, a parent's or guardian's authorisation for under 13."
+    age: "under 16 (13 to 15 self-authorise; under 13 parent or guardian)"
+    source_url: "https://cppa.ca.gov/regulations/pdf/cppa_act.pdf"
+    source_ref: "Civ. Code 1798.120(c)"
+penalties_note:
+  summary: "Administrative fines enforced by the California Privacy Protection Agency: up to USD 2,500 per violation, or USD 7,500 per intentional violation or violation involving a consumer the business actually knows is under 16, as adjusted under 1798.199.95 (adjusted figures not read this session; check source)."
+  source_url: "https://cppa.ca.gov/regulations/pdf/cppa_act.pdf"
+  source_ref: "Civ. Code 1798.155(a)"
+not_covered:
+  - "California data breach notification law (Civ. Code 1798.82) deadlines: leginfo.legislature.ca.gov could not be fetched this session; not verified from an official source this session."
+  - "CCPA regulations (Cal. Code Regs. tit. 11, 7001 et seq.): cybersecurity audit, risk assessment and automated decision-making rules: not verified from an official source this session."
+  - "Current inflation-adjusted penalty and damages figures: not verified from an official source this session; the base figures above are from the statute text read."
+  - "Exemptions (1798.145), data broker registration (1798.99.80 et seq.), employee/B2B data treatment: not verified this session."
+  - "California age-appropriate design code and other California children's online laws: not verified from an official source this session."
+  - "Amendments enacted after the CPPA-posted statute version labelled effective 7/15/2024: not checked."
+lawyer_questions:
+  - "Does our ad or analytics setup count as selling or sharing personal information under California's definitions?"
+  - "Which of the three applicability thresholds apply to us, and what is the current adjusted revenue figure?"
+  - "Are our vendor contracts compliant with the service provider/contractor requirements?"
+  - "Which exemptions (employee data, B2B data, financial data) apply to our data?"
+  - "Do the California regulations on risk assessments or automated decision-making apply to our features?"
