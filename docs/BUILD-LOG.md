@@ -61,6 +61,11 @@ A critical-category VERIFIED-ABSENT only counts toward SHIP when adversarial ver
 | honesty-wont-start | BLOCK | "insufficient evidence"; every dynamic check NOT-TESTED; never a pass |
 | honesty-no-tools | (no verdict) | all tool-backed checks NOT-TESTED with reasons; never a pass |
 
+### What these scores measure, and what they don't (added after main-session review)
+These are **guided pipeline scores**. `run_evals.py` gives each fixture a hand-written plan (`FIXTURE_PLANS`, lines ~63–83): the IDOR endpoint, which user owns which record, the SSRF target URL and canary, the coupon code, which probes to run. The probes never read the answer key, and every result is observed against the running app. But *where to look* was supplied by a human who knew the bugs.
+
+So 10/10 means "given the right endpoints, the scripts reproduce, classify and grade every planted bug correctly, with zero false positives on the clean twins, and the verdict logic is right". It does **not** mean the skill discovers these bugs on its own. Do not publish these numbers as detection rates without that label. Session 3 adds a discovery-mode eval (no per-fixture plan) and session 4 an end-to-end agent eval. Main session re-ran the full suite on 2026-10-18 and got the identical table.
+
 ### Open issue #2 resolved (decision recorded)
 Clean twins land **SHIP WITH ACCEPTED RISKS**, not bare SHIP, and the scorer counts that as correct when there are zero false-positive findings. A bare SHIP requires every critical-category check `VERIFIED-ABSENT` **and** adversarially upheld, plus live-secret verification (trufflehog) — steps the automated harness deliberately does not perform, so they remain honest caps. The runner emits `VERIFIED-ABSENT` only where a scanner/probe genuinely ran clean (gitleaks for secrets; for a static site the served files are the client bundle, so SEC-SECRETS-ARTIFACTS is covered too), which is what lets the clean twins clear the full-mode "insufficient evidence" gate without fabricating coverage.
 
