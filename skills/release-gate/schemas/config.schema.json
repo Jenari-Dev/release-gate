@@ -1,0 +1,216 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Jenari-Dev/release-gate/schemas/config.schema.json",
+  "title": "release-gate project config (.release-gate/config.yaml)",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "product"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "product": {
+      "type": "object",
+      "required": [
+        "name",
+        "distribution"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "distribution": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "enum": [
+              "website",
+              "saas",
+              "api",
+              "desktop-app",
+              "mobile-app",
+              "game",
+              "game-mod",
+              "browser-extension",
+              "self-hosted",
+              "library",
+              "cli"
+            ]
+          }
+        },
+        "pricing": {
+          "enum": [
+            "free",
+            "paid",
+            "freemium",
+            "open-source"
+          ]
+        },
+        "license": {
+          "type": "string"
+        },
+        "modded_product": {
+          "type": "string",
+          "description": "Game/software being modded or reverse-engineered"
+        },
+        "modded_product_eula_read": {
+          "type": "boolean"
+        }
+      }
+    },
+    "operator": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "legal_entity": {
+          "type": "string"
+        },
+        "entity_jurisdiction": {
+          "type": "string"
+        },
+        "operator_residence": {
+          "type": "string"
+        },
+        "contact_email": {
+          "type": "string",
+          "description": "Public contact for legal docs; never sent anywhere by the skill"
+        }
+      }
+    },
+    "audience": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "regions": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "worldwide",
+              "eu-eea",
+              "uk",
+              "us",
+              "us-ca",
+              "us-other-states",
+              "japan",
+              "canada",
+              "brazil",
+              "australia",
+              "other"
+            ]
+          }
+        },
+        "under_13_possible": {
+          "type": "boolean"
+        },
+        "under_16_possible": {
+          "type": "boolean"
+        },
+        "directed_at_children": {
+          "type": "boolean"
+        }
+      }
+    },
+    "features": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "accounts": {
+          "type": "boolean"
+        },
+        "payments": {
+          "type": "boolean"
+        },
+        "subscriptions": {
+          "type": "boolean"
+        },
+        "user_generated_content": {
+          "type": "boolean"
+        },
+        "messaging": {
+          "type": "boolean"
+        },
+        "ai_features": {
+          "type": "boolean"
+        },
+        "ai_providers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sends_email": {
+          "type": "boolean"
+        }
+      }
+    },
+    "traffic": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "expected_rps": {
+          "type": "number"
+        },
+        "peak_rps": {
+          "type": "number"
+        },
+        "source": {
+          "enum": [
+            "user",
+            "default"
+          ]
+        }
+      }
+    },
+    "thresholds": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "critical_path_coverage_pct": {
+          "type": "number",
+          "default": 70
+        }
+      }
+    },
+    "phases_skipped": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 13
+      }
+    },
+    "answers_source": {
+      "type": "object",
+      "description": "Per-key: 'user' (asked) or 'code' (inferred from code and confirmed by user)",
+      "additionalProperties": {
+        "enum": [
+          "user",
+          "code"
+        ]
+      }
+    },
+    "surface": {
+      "type": "object",
+      "description": "What kind of attack surface exists. Inferred from code + distribution, confirmed by user.",
+      "additionalProperties": false,
+      "properties": {
+        "has_server": {
+          "type": "boolean"
+        },
+        "has_web_ui": {
+          "type": "boolean"
+        },
+        "start_command": {
+          "type": "string"
+        },
+        "base_url": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

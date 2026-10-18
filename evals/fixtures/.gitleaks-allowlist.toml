@@ -1,0 +1,24 @@
+# Explicit exemptions for the release-gate repo self-audit (gitleaks >= 8.25, [[allowlists]] syntax).
+#
+# Every credential-shaped string listed here is a FAKE value planted on purpose so the eval fixtures have
+# something for secret scanners to find (Stripe-style sk_test_ key, the public AWS-docs example key pair).
+# They are documented as FAKE in the matching answer-key.yaml. Nothing outside these exact paths is exempt.
+#
+# Use:  gitleaks detect --source . --config evals/fixtures/.gitleaks-allowlist.toml
+# (extends the default ruleset, so real secrets anywhere else in the repo are still reported)
+
+title = "release-gate eval fixtures: planted FAKE secrets"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Planted FAKE credentials in eval fixtures (see answer-key.yaml in each fixture)"
+paths = [
+  '''^evals/fixtures/vuln-node-express/src/config\.js$''',
+  '''^evals/fixtures/vuln-node-express/answer-key\.yaml$''',
+  '''^evals/fixtures/vuln-python-fastapi/app/config\.py$''',
+  '''^evals/fixtures/vuln-python-fastapi/answer-key\.yaml$''',
+  '''^evals/fixtures/honesty-wont-start/server\.js$''',
+  '''^evals/fixtures/honesty-wont-start/answer-key\.yaml$''',
+]

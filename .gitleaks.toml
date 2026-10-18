@@ -1,0 +1,22 @@
+# gitleaks config for the release-gate repo itself (picked up automatically from the repo root).
+# Extends the default ruleset. The only exemptions are files that hold FAKE,
+# deliberately planted credentials: eval fixtures (documented as FAKE in each
+# answer-key.yaml) and unit-test inputs. Anything else is still reported.
+
+title = "release-gate self-audit"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Planted FAKE credentials in eval fixtures and unit-test data"
+paths = [
+  '''^evals/fixtures/vuln-node-express/src/config\.js$''',
+  '''^evals/fixtures/vuln-node-express/answer-key\.yaml$''',
+  '''^evals/fixtures/vuln-python-fastapi/app/config\.py$''',
+  '''^evals/fixtures/vuln-python-fastapi/answer-key\.yaml$''',
+  '''^evals/fixtures/honesty-wont-start/server\.js$''',
+  '''^evals/fixtures/honesty-wont-start/answer-key\.yaml$''',
+  '''^tests/data/tool-outputs/''',
+  '''^tests/test_[a-z_]+\.py$''',
+]

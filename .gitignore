@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+node_modules/
+*.egg-info/
+dist/
+build/
+# fixture runtime state
+evals/fixtures/*/data/*.db
+evals/fixtures/*/*.db
+evals/results/
+# per-project state when release-gate scans itself
+.release-gate/evidence/

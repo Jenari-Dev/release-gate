@@ -1,0 +1,42 @@
+[
+  {
+    "RuleID": "generic-api-key",
+    "Description": "Detected a Generic API Key, potentially exposing access to various services and sensitive operations.",
+    "StartLine": 12,
+    "EndLine": 12,
+    "StartColumn": 1,
+    "EndColumn": 42,
+    "Match": "DB_PASSWORD = \"s3cr3t-Passw0rd-9f8e7d6c5b4a\"",
+    "Secret": "s3cr3t-Passw0rd-9f8e7d6c5b4a",
+    "File": "app/settings.py",
+    "SymlinkFile": "",
+    "Commit": "3f2b1c9a7d8e4f5a6b0c1d2e3f4a5b6c7d8e9f01",
+    "Entropy": 4.1238413,
+    "Author": "Test User",
+    "Email": "test@example.invalid",
+    "Date": "2026-03-02T10:21:07Z",
+    "Message": "add settings module",
+    "Tags": [],
+    "Fingerprint": "3f2b1c9a7d8e4f5a6b0c1d2e3f4a5b6c7d8e9f01:app/settings.py:generic-api-key:12"
+  },
+  {
+    "RuleID": "aws-access-token",
+    "Description": "Identified a pattern that may indicate AWS credentials, risking unauthorized cloud resource access and data breaches on AWS platforms.",
+    "StartLine": 3,
+    "EndLine": 3,
+    "StartColumn": 19,
+    "EndColumn": 38,
+    "Match": "AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE",
+    "Secret": "AKIAIOSFODNN7EXAMPLE",
+    "File": "config/prod.env",
+    "SymlinkFile": "",
+    "Commit": "3f2b1c9a7d8e4f5a6b0c1d2e3f4a5b6c7d8e9f01",
+    "Entropy": 3.6841838,
+    "Author": "Test User",
+    "Email": "test@example.invalid",
+    "Date": "2026-03-02T10:21:07Z",
+    "Message": "add settings module",
+    "Tags": [],
+    "Fingerprint": "3f2b1c9a7d8e4f5a6b0c1d2e3f4a5b6c7d8e9f01:config/prod.env:aws-access-token:3"
+  }
+]

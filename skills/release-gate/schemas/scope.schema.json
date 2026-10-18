@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Jenari-Dev/release-gate/schemas/scope.schema.json",
+  "title": "release-gate authorized test scope (.release-gate/scope.yaml)",
+  "description": "Dynamic testing may only touch targets listed here. Default is a local instance the skill starts itself.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "confirmed_at",
+    "targets"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "confirmed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "confirmed_by": {
+      "const": "user",
+      "description": "Scope is only ever confirmed by the user in chat"
+    },
+    "targets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "url",
+          "environment"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Base URL, e.g. http://127.0.0.1:3000"
+          },
+          "environment": {
+            "enum": [
+              "local",
+              "staging",
+              "production"
+            ]
+          },
+          "owned_confirmed": {
+            "type": "boolean",
+            "description": "User confirmed they own and may test it"
+          },
+          "production_confirmation": {
+            "type": "string",
+            "description": "For production only: the user's typed confirmation naming this exact URL"
+          },
+          "allowed_tests": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "passive",
+                "scan",
+                "authz",
+                "exploit",
+                "fuzz",
+                "load",
+                "stress",
+                "soak",
+                "spike"
+              ]
+            }
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "environment": {
+                  "const": "production"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "production_confirmation",
+                "owned_confirmed"
+              ],
+              "properties": {
+                "allowed_tests": {
+                  "items": {
+                    "enum": [
+                      "passive",
+                      "scan",
+                      "authz",
+                      "exploit",
+                      "load"
+                    ]
+                  }
+                }
+              },
+              "description": "Production: only with typed confirmation naming the URL; never fuzz/stress/spike/soak (DoS-level) and never destructive exploits (data deletion)."
+            }
+          }
+        ]
+      }
+    },
+    "excluded_hosts": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Third-party hosts the app calls that must never be tested (payment, OAuth, CDNs, APIs)"
+    }
+  }
+}

@@ -1,0 +1,61 @@
+fixture: vuln-node-express
+port: 3101              # internal stand-in service (SSRF target): 3191
+expected_verdict: BLOCK
+# All repro results below were observed by hand on 2026-10-18 against a fresh boot (evals/fixtures/_repro/repro-node.sh).
+# Test accounts (fixture-only, throwaway): alice / alice-fixture-pw (id 1), bob / bob-fixture-pw (id 2).
+# Login: POST /login {"username","password"} -> {"token"}; send as "Authorization: Bearer <token>".
+findings:
+  - id: AK-IDOR-1
+    category: authz
+    expected_evidence_class: EXPLOITED
+    location: src/routes/messages.js:13
+    repro: "login as alice, GET /api/messages/2 (bob's) -> observed 200 {\"id\":2,\"owner_id\":2,\"body\":\"Bob here: ... BOB-PRIVATE-CANARY-9z8y\"}"
+  - id: AK-SQLI-1
+    category: injection
+    expected_evidence_class: EXPLOITED
+    location: src/routes/search.js:9
+    repro: "GET /api/search?q=zzz' UNION SELECT id,username,password_hash FROM users-- -> observed 200 with both users' scrypt password hashes in the price field"
+  - id: AK-XSS-1
+    category: xss
+    expected_evidence_class: EXPLOITED
+    location: src/routes/comments.js:15
+    repro: "alice POST /api/comments {\"body\":\"<img src=x onerror=window.__xss=1>\"}; GET /comments -> observed raw unescaped markup in HTML; in a real browser window.__xss === 1 (script executed). Clean twin: HTML-escaped, window.__xss undefined."
+  - id: AK-SSRF-1
+    category: ssrf
+    expected_evidence_class: EXPLOITED
+    location: src/routes/preview.js:11
+    repro: "as alice GET /api/fetch-preview?url=http://127.0.0.1:3191/latest/meta-data/ -> observed 200 with preview containing SSRF-CANARY-7f3a91c2-internal-only (internal-only service)"
+  - id: AK-SECRET-1
+    category: secrets
+    expected_evidence_class: TOOL-CONFIRMED
+    location: src/config.js:9
+    repro: "secret scanner (gitleaks/trufflehog) flags Stripe-shaped key sk_test_51FAKE... in src/config.js. FAKE value, not a real credential."
+  - id: AK-SECRET-2
+    category: secrets
+    expected_evidence_class: TOOL-CONFIRMED
+    optional: true          # AWS docs example pair contains EXAMPLE; some scanners deliberately skip it via stopwords. A miss is tolerated, a hit is correct.
+    location: src/config.js:10
+    repro: "AWS-style access key AKIAIOSFODNN7EXAMPLE + secret wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY (the public AWS documentation example). FAKE."
+  - id: AK-SCA-1
+    category: sca
+    expected_evidence_class: TOOL-CONFIRMED
+    location: package.json:15
+    vulnerable_dep: {name: lodash, version: 4.17.15, ecosystem: npm, advisory: GHSA-p6mc-m468-83gw}
+    also_matches: [GHSA-35jh-r3h4-6jhm, GHSA-29mw-wpgm-hmr9]   # advisories confirmed against api.osv.dev on 2026-10-18; fixed version used by the clean twin: 4.18.1 (0 advisories)
+    repro: "osv-scanner / npm audit on package-lock.json reports lodash 4.17.15 (GHSA-p6mc-m468-83gw, CVE-2020-8203). Not exploited."
+  - id: AK-RATE-1
+    category: rate-limit
+    expected_evidence_class: EXPLOITED
+    location: src/routes/auth.js:9
+    repro: "12 consecutive wrong-password POST /login for alice -> observed 401 x12, never 429 / no lockout / no Retry-After"
+  - id: AK-LOG-1
+    category: logging
+    expected_evidence_class: EXPLOITED
+    location: src/routes/auth.js:11
+    repro: "POST /login with password 'wrong-guess-N' -> observed the plaintext submitted password in logs/app.log (and stdout): 'login attempt user=alice password=wrong-guess-N'"
+  - id: AK-RACE-1
+    category: race
+    expected_evidence_class: EXPLOITED
+    location: src/routes/coupons.js:16
+    repro: "bob fires 10 concurrent POST /api/coupons/redeem {\"code\":\"WELCOME10\"} (single-use, max_uses=1) -> observed 10x 200 and bob's balance 100 (should be 10); the 150 ms async gap keeps this reliable, expect >=2 successes on every run. Read-then-write with an await between check and update, no transaction."
+clean_must_not_flag: []   # vulnerable fixture

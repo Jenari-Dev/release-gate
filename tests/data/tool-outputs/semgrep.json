@@ -1,0 +1,55 @@
+{
+  "version": "1.101.0",
+  "results": [
+    {
+      "check_id": "python.lang.security.audit.formatted-sql-query.formatted-sql-query",
+      "path": "app/db.py",
+      "start": {"line": 27, "col": 5, "offset": 812},
+      "end": {"line": 27, "col": 62, "offset": 869},
+      "extra": {
+        "message": "Detected possible formatted SQL query. Use parameterized queries instead.",
+        "metadata": {
+          "cwe": ["CWE-89: Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')"],
+          "owasp": ["A01:2017 - Injection", "A03:2021 - Injection"],
+          "category": "security",
+          "confidence": "LOW",
+          "impact": "MEDIUM",
+          "likelihood": "LOW",
+          "technology": ["python"],
+          "references": ["https://owasp.org/Top10/A03_2021-Injection"]
+        },
+        "severity": "WARNING",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "is_ignored": false,
+        "validation_state": "NO_VALIDATOR",
+        "engine_kind": "OSS"
+      }
+    },
+    {
+      "check_id": "python.flask.security.audit.render-template-string.render-template-string",
+      "path": "app/views.py",
+      "start": {"line": 61, "col": 12, "offset": 1930},
+      "end": {"line": 61, "col": 60, "offset": 1978},
+      "extra": {
+        "message": "Found a template created with string formatting. This is susceptible to server-side template injection and cross-site scripting attacks.",
+        "metadata": {
+          "cwe": "CWE-79: Improper Neutralization of Input During Web Page Generation ('Cross-site Scripting')",
+          "category": "security",
+          "confidence": "MEDIUM",
+          "impact": "HIGH"
+        },
+        "severity": "ERROR",
+        "fingerprint": "requires login",
+        "lines": "requires login",
+        "is_ignored": false,
+        "engine_kind": "OSS"
+      }
+    }
+  ],
+  "errors": [],
+  "paths": {"scanned": ["app/__init__.py", "app/db.py", "app/settings.py", "app/views.py"], "skipped": []},
+  "time": {"rules": [], "rules_parse_time": 0.7, "profiling_times": {}},
+  "engine_requested": "OSS",
+  "skipped_rules": []
+}

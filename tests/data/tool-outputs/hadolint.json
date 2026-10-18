@@ -1,0 +1,6 @@
+[
+  {"code": "DL3006", "column": 1, "file": "Dockerfile", "level": "warning", "line": 1, "message": "Always tag the version of an image explicitly"},
+  {"code": "DL3002", "column": 1, "file": "Dockerfile", "level": "warning", "line": 12, "message": "Last USER should not be root"},
+  {"code": "DL3059", "column": 1, "file": "Dockerfile", "level": "info", "line": 7, "message": "Multiple consecutive `RUN` instructions. Consider consolidation."},
+  {"code": "DL4006", "column": 1, "file": "Dockerfile", "level": "error", "line": 9, "message": "Set the SHELL option -o pipefail before RUN with a pipe in it."}
+]

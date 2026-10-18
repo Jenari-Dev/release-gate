@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "CodeQL",
+          "organization": "GitHub",
+          "semanticVersion": "2.20.1",
+          "rules": [
+            {
+              "id": "py/sql-injection",
+              "name": "py/sql-injection",
+              "shortDescription": {"text": "SQL query built from user-controlled sources"},
+              "fullDescription": {"text": "Building a SQL query from user-controlled sources is vulnerable to insertion of malicious SQL code by the user."},
+              "defaultConfiguration": {"level": "error"},
+              "properties": {
+                "tags": ["correctness", "security", "external/cwe/cwe-089"],
+                "kind": "path-problem",
+                "precision": "high",
+                "security-severity": "8.8",
+                "problem.severity": "error"
+              }
+            },
+            {
+              "id": "py/path-injection",
+              "name": "py/path-injection",
+              "shortDescription": {"text": "Uncontrolled data used in path expression"},
+              "fullDescription": {"text": "Accessing paths influenced by users can allow an attacker to access unexpected resources."},
+              "defaultConfiguration": {"level": "error"},
+              "properties": {
+                "tags": ["correctness", "external/cwe/cwe-022", "external/cwe/cwe-023", "security"],
+                "kind": "path-problem",
+                "precision": "high",
+                "security-severity": "7.5",
+                "problem.severity": "error"
+              }
+            }
+          ]
+        }
+      },
+      "invocations": [{"executionSuccessful": true}],
+      "results": [
+        {
+          "ruleId": "py/sql-injection",
+          "ruleIndex": 0,
+          "rule": {"id": "py/sql-injection", "index": 0},
+          "message": {"text": "This SQL query depends on a [user-provided value](1)."},
+          "locations": [
+            {"physicalLocation": {"artifactLocation": {"uri": "app/db.py", "uriBaseId": "%SRCROOT%", "index": 0}, "region": {"startLine": 27, "startColumn": 22, "endColumn": 27}}}
+          ],
+          "partialFingerprints": {"primaryLocationLineHash": "5b1f0a8e3c2d4f61:1"}
+        },
+        {
+          "ruleId": "py/path-injection",
+          "ruleIndex": 1,
+          "rule": {"id": "py/path-injection", "index": 1},
+          "message": {"text": "This path depends on a [user-provided value](1)."},
+          "locations": [
+            {"physicalLocation": {"artifactLocation": {"uri": "app/views.py", "uriBaseId": "%SRCROOT%", "index": 1}, "region": {"startLine": 80, "startColumn": 16, "endColumn": 24}}}
+          ],
+          "partialFingerprints": {"primaryLocationLineHash": "a0c3d4e5f6b7a8c9:1"}
+        }
+      ]
+    }
+  ]
+}

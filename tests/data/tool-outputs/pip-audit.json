@@ -1,0 +1,19 @@
+{
+  "dependencies": [
+    {
+      "name": "jinja2",
+      "version": "2.10",
+      "vulns": [
+        {
+          "id": "PYSEC-2019-217",
+          "fix_versions": ["2.10.1"],
+          "aliases": ["CVE-2019-10906", "GHSA-462w-v97r-4m45"],
+          "description": "In Pallets Jinja before 2.10.1, str.format_map allows a sandbox escape."
+        }
+      ]
+    },
+    {"name": "flask", "version": "3.0.3", "vulns": []},
+    {"name": "internal-lib", "skip_reason": "Dependency not found on PyPI and could not be audited: internal-lib (1.0.0)"}
+  ],
+  "fixes": []
+}

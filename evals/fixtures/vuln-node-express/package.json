@@ -1,0 +1,17 @@
+{
+  "name": "vuln-node-express",
+  "version": "1.0.0",
+  "private": true,
+  "description": "release-gate eval fixture: intentionally vulnerable Express app. DO NOT DEPLOY.",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "engines": {
+    "node": ">=22.5"
+  },
+  "dependencies": {
+    "express": "5.3.0",
+    "lodash": "4.17.15"
+  }
+}

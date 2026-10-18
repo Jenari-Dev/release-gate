@@ -1,0 +1,43 @@
+{
+  "errors": [],
+  "generated_at": "2026-03-02T10:25:00Z",
+  "metrics": {
+    "_totals": {
+      "CONFIDENCE.HIGH": 1, "CONFIDENCE.LOW": 1, "CONFIDENCE.MEDIUM": 0, "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0, "SEVERITY.LOW": 0, "SEVERITY.MEDIUM": 2, "SEVERITY.UNDEFINED": 0,
+      "loc": 412, "nosec": 0, "skipped_tests": 0
+    }
+  },
+  "results": [
+    {
+      "code": "27     query = \"SELECT * FROM users WHERE name = '%s'\" % name\n28     cur.execute(query)\n",
+      "col_offset": 12,
+      "end_col_offset": 57,
+      "filename": "app/db.py",
+      "issue_confidence": "LOW",
+      "issue_cwe": {"id": 89, "link": "https://cwe.mitre.org/data/definitions/89.html"},
+      "issue_severity": "MEDIUM",
+      "issue_text": "Possible SQL injection vector through string-based query construction.",
+      "line_number": 28,
+      "line_range": [27, 28],
+      "more_info": "https://bandit.readthedocs.io/en/1.8.3/plugins/b608_hardcoded_sql_expressions.html",
+      "test_id": "B608",
+      "test_name": "hardcoded_sql_expressions"
+    },
+    {
+      "code": "11 \n12 DB_PASSWORD = \"s3cr3t-Passw0rd-9f8e7d6c5b4a\"\n13 \n",
+      "col_offset": 14,
+      "end_col_offset": 43,
+      "filename": "app/settings.py",
+      "issue_confidence": "MEDIUM",
+      "issue_cwe": {"id": 259, "link": "https://cwe.mitre.org/data/definitions/259.html"},
+      "issue_severity": "LOW",
+      "issue_text": "Possible hardcoded password: 's3cr3t-Passw0rd-9f8e7d6c5b4a'",
+      "line_number": 12,
+      "line_range": [12],
+      "more_info": "https://bandit.readthedocs.io/en/1.8.3/plugins/b105_hardcoded_password_string.html",
+      "test_id": "B105",
+      "test_name": "hardcoded_password_string"
+    }
+  ]
+}

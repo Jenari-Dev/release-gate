@@ -1,0 +1,26 @@
+fixture: clean-node-express
+port: 3102              # internal stand-in service (SSRF target): 3192
+expected_verdict: SHIP
+# Hardened twin of vuln-node-express. Same routes, same seed data. Every probe below was run by hand on 2026-10-18
+# (evals/fixtures/_repro/repro-node.sh 3102 3192 ...). A finding in any of these categories is a FALSE POSITIVE.
+# Test accounts: alice / alice-fixture-pw, bob / bob-fixture-pw.
+findings: []
+clean_must_not_flag:
+  - category: authz
+    why: "GET /api/messages/2 as alice -> observed 404 {\"error\":\"not found\"}; ownership is part of the SQL WHERE (src/routes/messages.js:15)"
+  - category: injection
+    why: "same UNION payload on /api/search -> observed 200 []; parameterized LIKE with ESCAPE (src/routes/search.js)"
+  - category: xss
+    why: "comment <img onerror> is HTML-escaped (&lt;img...); in a real browser window.__xss stays undefined; CSP default-src 'none' + nosniff (src/routes/comments.js)"
+  - category: ssrf
+    why: "fetch-preview of http://127.0.0.1:3192/... -> observed 403 {\"error\":\"host not allowed\"}; https-only hostname allowlist + private-IP DNS check + no redirects (src/routes/preview.js)"
+  - category: secrets
+    why: "no credentials in source; STRIPE_SECRET_KEY read from env and required (src/config.js); start.sh default is the non-secret 'local-dev-placeholder'"
+  - category: sca
+    why: "lodash 4.18.1 and express 5.3.0 -> 0 advisories on api.osv.dev (2026-10-18)"
+  - category: rate-limit
+    why: "12 bad logins -> observed 401 x4 then 429 x8 (5 attempts/min per IP+username, src/routes/auth.js, src/ratelimit.js)"
+  - category: logging
+    why: "0 log lines contain a submitted password; only 'login failed user=<name>' / 'login ok user=<name>' (src/routes/auth.js)"
+  - category: race
+    why: "10 concurrent redeems of WELCOME10 -> observed 1x 200, 9x 409, balance 10; conditional UPDATE inside BEGIN IMMEDIATE (src/routes/coupons.js)"

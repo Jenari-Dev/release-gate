@@ -1,0 +1,26 @@
+fixture: clean-python-fastapi
+port: 3104              # internal stand-in service (SSRF target): 3194; analytics observation sink: 3164 (GET /_events)
+expected_verdict: SHIP
+# Hardened twin of vuln-python-fastapi. Same routes, same seed data. Every probe below was run by hand on 2026-10-18
+# (evals/fixtures/_repro/repro-py.sh 3104 3194 3164 ...). A finding in any of these categories is a FALSE POSITIVE.
+# Test accounts: alice / alice-fixture-pw, bob / bob-fixture-pw.
+findings: []
+clean_must_not_flag:
+  - category: authz
+    why: "GET /api/messages/2 as alice -> observed 404 {\"detail\":\"not found\"}; ownership is part of the SQL WHERE (app/main.py:105)"
+  - category: injection
+    why: "same UNION payload on /api/search -> observed 200 []; parameterized LIKE with ESCAPE (app/main.py)"
+  - category: ssrf
+    why: "fetch-preview of http://127.0.0.1:3194/... -> observed 403 {\"error\":\"host not allowed\"}; https-only hostname allowlist + public-address check + no redirects (app/main.py)"
+  - category: secrets
+    why: "no credentials in source; STRIPE_SECRET_KEY read from env and required (app/config.py:21); start.sh default is the non-secret 'local-dev-placeholder'"
+  - category: sca
+    why: "fastapi 0.143.5, starlette 1.8.0, uvicorn 0.54.0, python-multipart 0.0.32 -> 0 advisories on api.osv.dev (2026-10-18)"
+  - category: rate-limit
+    why: "12 bad logins -> observed 401 x4 then 429 x8 (5 attempts/min per IP+username, app/main.py:47)"
+  - category: logging
+    why: "0 log lines contain a submitted password; only 'login failed user=<name>' / 'login ok user=<name>'"
+  - category: deletion
+    why: "register carol, DELETE /api/account -> 200; POST /login as carol afterwards -> observed 401; messages/user rows and sessions removed (app/main.py:154)"
+  - category: policy-mismatch
+    why: "policy says no sharing with third parties and the app really sends nothing: analytics observation sink GET :3164/_events -> observed [] after the full repro run"

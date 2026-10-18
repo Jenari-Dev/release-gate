@@ -1,0 +1,11 @@
+{
+  "name": "release-gate",
+  "owner": { "name": "JenAriDev", "url": "https://github.com/Jenari-Dev" },
+  "plugins": [
+    {
+      "name": "release-gate",
+      "source": "./",
+      "description": "Evidence-backed pre-release gate with an honest ship / no-ship verdict."
+    }
+  ]
+}

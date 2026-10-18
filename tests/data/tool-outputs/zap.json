@@ -1,0 +1,56 @@
+{
+  "@programName": "ZAP",
+  "@version": "2.15.0",
+  "@generated": "Mon, 2 Mar 2026 10:40:12",
+  "site": [
+    {
+      "@name": "http://localhost:3000",
+      "@host": "localhost",
+      "@port": "3000",
+      "@ssl": "false",
+      "alerts": [
+        {
+          "pluginid": "10038",
+          "alertRef": "10038-1",
+          "alert": "Content Security Policy (CSP) Header Not Set",
+          "name": "Content Security Policy (CSP) Header Not Set",
+          "riskcode": "2",
+          "confidence": "3",
+          "riskdesc": "Medium (High)",
+          "desc": "<p>Content Security Policy (CSP) is an added layer of security that helps to detect and mitigate certain types of attacks, including Cross Site Scripting (XSS) and data injection attacks.</p>",
+          "instances": [
+            {"id": "0", "uri": "http://localhost:3000/", "method": "GET", "param": "", "attack": "", "evidence": "", "otherinfo": ""},
+            {"id": "1", "uri": "http://localhost:3000/login", "method": "GET", "param": "", "attack": "", "evidence": "", "otherinfo": ""}
+          ],
+          "count": "2",
+          "solution": "<p>Ensure that your web server, application server, load balancer, etc. is configured to set the Content-Security-Policy header.</p>",
+          "otherinfo": "",
+          "reference": "<p>https://developer.mozilla.org/en-US/docs/Web/Security/CSP</p>",
+          "cweid": "693",
+          "wascid": "15",
+          "sourceid": "3"
+        },
+        {
+          "pluginid": "10010",
+          "alertRef": "10010",
+          "alert": "Cookie No HttpOnly Flag",
+          "name": "Cookie No HttpOnly Flag",
+          "riskcode": "1",
+          "confidence": "2",
+          "riskdesc": "Low (Medium)",
+          "desc": "<p>A cookie has been set without the HttpOnly flag, which means that the cookie can be accessed by JavaScript.</p>",
+          "instances": [
+            {"id": "5", "uri": "http://localhost:3000/login", "method": "POST", "param": "sid", "attack": "", "evidence": "Set-Cookie: sid", "otherinfo": ""}
+          ],
+          "count": "1",
+          "solution": "<p>Ensure that the HttpOnly flag is set for all cookies.</p>",
+          "otherinfo": "",
+          "reference": "<p>https://owasp.org/www-community/HttpOnly</p>",
+          "cweid": "1004",
+          "wascid": "13",
+          "sourceid": "3"
+        }
+      ]
+    }
+  ]
+}

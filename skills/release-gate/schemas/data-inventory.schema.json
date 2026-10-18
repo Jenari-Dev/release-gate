@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Jenari-Dev/release-gate/schemas/data-inventory.schema.json",
+  "title": "release-gate data inventory",
+  "description": "Single source of truth for every privacy/legal output. Built from the code; user corrections are recorded with source: user.",
+  "type": "object",
+  "required": ["schema_version", "generated_at", "fields", "third_parties", "client_storage", "stores", "log_sinks"],
+  "additionalProperties": false,
+  "$defs": {
+    "provenance": {
+      "type": "object",
+      "required": ["source"],
+      "properties": {
+        "source": { "enum": ["code", "user"] },
+        "refs": { "type": "array", "items": { "type": "string", "pattern": "^.+:[0-9]+$" }, "description": "file:line references (required when source is code)" },
+        "note": { "type": "string" }
+      },
+      "if": { "properties": { "source": { "const": "code" } } },
+      "then": { "required": ["refs"], "properties": { "refs": { "minItems": 1 } } }
+    }
+  },
+  "properties": {
+    "schema_version": { "const": 1 },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "confirmed_by_user": { "type": "boolean", "default": false },
+    "fields": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "classification", "provenance"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "description": "e.g. users.email" },
+          "classification": { "enum": ["identifier", "contact", "credential", "financial", "location", "device-telemetry", "content", "sensitive", "children", "other"] },
+          "sensitive_kind": { "type": "string", "description": "health, biometric, etc. when classification is sensitive" },
+          "collected_via": { "type": "array", "items": { "enum": ["form", "api-body", "model", "analytics-event", "log", "cookie", "third-party", "derived"] } },
+          "purposes": { "type": "array", "items": { "type": "string" } },
+          "lawful_basis": { "type": "string" },
+          "used_in_code": { "type": "boolean", "description": "false = collected but no read path found (data-minimization candidate)" },
+          "encrypted_at_rest": { "enum": ["yes", "no", "unknown"] },
+          "retention": { "type": "string", "description": "Retention defined in code, or 'none defined'" },
+          "provenance": { "$ref": "#/$defs/provenance" }
+        }
+      }
+    },
+    "third_parties": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["host", "provenance"],
+        "additionalProperties": false,
+        "properties": {
+          "host": { "type": "string" },
+          "vendor": { "type": "string" },
+          "role": { "enum": ["processor", "subprocessor", "controller", "unknown"] },
+          "data_sent": { "type": "array", "items": { "type": "string" }, "description": "inventory field names" },
+          "purpose": { "type": "string" },
+          "transfer_region": { "type": "string" },
+          "provenance": { "$ref": "#/$defs/provenance" }
+        }
+      }
+    },
+    "client_storage": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "mechanism", "provenance"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string" },
+          "mechanism": { "enum": ["cookie", "localStorage", "sessionStorage", "indexedDB", "other"] },
+          "set_by": { "enum": ["first-party", "third-party"] },
+          "necessity": { "enum": ["strictly-necessary", "functional", "analytics", "advertising", "unknown"] },
+          "expiry": { "type": "string" },
+          "provenance": { "$ref": "#/$defs/provenance" }
+        }
+      }
+    },
+    "stores": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "kind", "provenance"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string" },
+          "kind": { "enum": ["database", "object-storage", "file", "cache", "queue", "search", "other"] },
+          "encrypted_at_rest": { "enum": ["yes", "no", "unknown"] },
+          "region": { "type": "string" },
+          "provenance": { "$ref": "#/$defs/provenance" }
+        }
+      }
+    },
+    "log_sinks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["location", "provenance"],
+        "additionalProperties": false,
+        "properties": {
+          "location": { "type": "string", "description": "file:line of the log statement" },
+          "fields_logged": { "type": "array", "items": { "type": "string" } },
+          "contains_credential": { "type": "boolean" },
+          "provenance": { "$ref": "#/$defs/provenance" }
+        }
+      }
+    },
+    "rights": {
+      "type": "object",
+      "description": "Data-subject-rights implementations found in code",
+      "additionalProperties": false,
+      "properties": {
+        "access_export": { "$ref": "#/$defs/provenance" },
+        "deletion": { "$ref": "#/$defs/provenance" },
+        "correction": { "$ref": "#/$defs/provenance" },
+        "opt_out_sale_share": { "$ref": "#/$defs/provenance" }
+      }
+    }
+  }
+}

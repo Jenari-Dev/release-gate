@@ -1,0 +1,11 @@
+fixture: clean-static-trackers
+port: 3106              # fake analytics vendor: 3156 (GET /_events, POST /_reset)
+expected_verdict: SHIP
+# Same site, consent done right. Verified 2026-10-18 in the Claude desktop built-in browser.
+# A finding in any of these categories is a FALSE POSITIVE. The site DOES use an analytics tracker, but only after Accept.
+findings: []
+clean_must_not_flag:
+  - category: tracking
+    why: "load http://127.0.0.1:3106/ with no click -> observed GET :3156/_events = []; no tracker <script> in index.html; after clicking Reject and reloading -> still []; only after clearing localStorage and clicking Accept did /tracker.js, /collect, /pixel.gif appear (site/consent.js injects the script on 'accept')."
+  - category: policy-mismatch
+    why: "site/privacy.html truthfully says analytics + a tracking cookie load only after Accept, and nothing loads on Reject/no choice -- matches the observed behaviour above."

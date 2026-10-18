@@ -1,0 +1,63 @@
+{
+  "results": [
+    {
+      "source": {"path": "/work/app/package-lock.json", "type": "lockfile"},
+      "packages": [
+        {
+          "package": {"name": "lodash", "version": "4.17.15", "ecosystem": "npm"},
+          "vulnerabilities": [
+            {
+              "modified": "2024-05-20T21:19:43Z",
+              "published": "2021-05-06T16:05:51Z",
+              "schema_version": "1.6.0",
+              "id": "GHSA-35jh-r3h4-6jhm",
+              "aliases": ["CVE-2021-23337"],
+              "summary": "Command Injection in lodash",
+              "details": "lodash versions prior to 4.17.21 are vulnerable to Command Injection via the template function.",
+              "affected": [
+                {
+                  "package": {"name": "lodash", "ecosystem": "npm", "purl": "pkg:npm/lodash"},
+                  "ranges": [{"type": "SEMVER", "events": [{"introduced": "0"}, {"fixed": "4.17.21"}]}]
+                }
+              ],
+              "references": [{"type": "ADVISORY", "url": "https://nvd.nist.gov/vuln/detail/CVE-2021-23337"}],
+              "database_specific": {"cwe_ids": ["CWE-77", "CWE-94"], "github_reviewed": true, "severity": "HIGH"}
+            }
+          ],
+          "groups": [
+            {"ids": ["GHSA-35jh-r3h4-6jhm"], "aliases": ["CVE-2021-23337", "GHSA-35jh-r3h4-6jhm"], "max_severity": "7.2"}
+          ]
+        }
+      ]
+    },
+    {
+      "source": {"path": "/work/app/requirements.txt", "type": "lockfile"},
+      "packages": [
+        {
+          "package": {"name": "Jinja2", "version": "2.10", "ecosystem": "PyPI"},
+          "vulnerabilities": [
+            {
+              "modified": "2024-02-16T08:11:07Z",
+              "published": "2019-04-10T14:59:59Z",
+              "schema_version": "1.6.0",
+              "id": "GHSA-462w-v97r-4m45",
+              "aliases": ["CVE-2019-10906", "PYSEC-2019-217"],
+              "summary": "High severity vulnerability that affects Jinja2",
+              "details": "In Pallets Jinja before 2.10.1, str.format_map allows a sandbox escape.",
+              "affected": [
+                {
+                  "package": {"name": "jinja2", "ecosystem": "PyPI", "purl": "pkg:pypi/jinja2"},
+                  "ranges": [{"type": "ECOSYSTEM", "events": [{"introduced": "0"}, {"fixed": "2.10.1"}]}]
+                }
+              ],
+              "database_specific": {"cwe_ids": [], "github_reviewed": true, "severity": "HIGH"}
+            }
+          ],
+          "groups": [
+            {"ids": ["GHSA-462w-v97r-4m45"], "aliases": ["CVE-2019-10906", "GHSA-462w-v97r-4m45", "PYSEC-2019-217"], "max_severity": "8.6"}
+          ]
+        }
+      ]
+    }
+  ]
+}

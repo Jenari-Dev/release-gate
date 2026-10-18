@@ -1,0 +1,51 @@
+{
+  "$schema": "https://docs.oasis-open.org/sarif/sarif/v2.1.0/errata01/os/schemas/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "invocations": [{"executionSuccessful": true, "toolExecutionNotifications": []}],
+      "results": [
+        {
+          "fingerprints": {"matchBasedId/v1": "4e1c9e0d5f6d0f9a1e5c"},
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {"uri": "app/db.py", "uriBaseId": "%SRCROOT%"},
+                "region": {"endColumn": 62, "endLine": 27, "snippet": {"text": "    query = \"SELECT * FROM users WHERE name = '%s'\" % name"}, "startColumn": 5, "startLine": 27}
+              }
+            }
+          ],
+          "message": {"text": "Detected possible formatted SQL query. Use parameterized queries instead."},
+          "properties": {},
+          "ruleId": "python.lang.security.audit.formatted-sql-query.formatted-sql-query",
+          "ruleIndex": 0
+        }
+      ],
+      "tool": {
+        "driver": {
+          "name": "Semgrep OSS",
+          "semanticVersion": "1.101.0",
+          "rules": [
+            {
+              "defaultConfiguration": {"level": "warning"},
+              "fullDescription": {"text": "Detected possible formatted SQL query. Use parameterized queries instead."},
+              "help": {"markdown": "Detected possible formatted SQL query. Use parameterized queries instead.", "text": "Detected possible formatted SQL query. Use parameterized queries instead."},
+              "helpUri": "https://semgrep.dev/r/python.lang.security.audit.formatted-sql-query.formatted-sql-query",
+              "id": "python.lang.security.audit.formatted-sql-query.formatted-sql-query",
+              "name": "python.lang.security.audit.formatted-sql-query.formatted-sql-query",
+              "properties": {
+                "precision": "very-high",
+                "tags": [
+                  "CWE-89: Improper Neutralization of Special Elements used in an SQL Command ('SQL Injection')",
+                  "OWASP-A03:2021 - Injection",
+                  "security"
+                ]
+              },
+              "shortDescription": {"text": "Semgrep Finding: python.lang.security.audit.formatted-sql-query.formatted-sql-query"}
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

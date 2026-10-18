@@ -1,0 +1,369 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Jenari-Dev/release-gate/schemas/finding.schema.json",
+  "title": "release-gate finding or check result",
+  "description": "One finding (an issue) or one check result (a pass/absence claim). Every entry carries exactly one evidence class. A check with no artifact is NOT-TESTED.",
+  "type": "object",
+  "required": [
+    "id",
+    "kind",
+    "title",
+    "category",
+    "evidence_class",
+    "evidence"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^RG-[A-Z0-9]+-[0-9]{3,}$",
+      "description": "Stable id, e.g. RG-AUTHZ-001"
+    },
+    "kind": {
+      "enum": [
+        "finding",
+        "check"
+      ],
+      "description": "finding = an issue was found or suspected; check = a test was run (or not) and its outcome recorded"
+    },
+    "check_id": {
+      "type": "string",
+      "pattern": "^[A-Z0-9]+(-[A-Z0-9]+)+$",
+      "description": "Catalog check this entry belongs to (references/checks.yaml), e.g. SEC-AUTHZ-MATRIX"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 3
+    },
+    "severity": {
+      "enum": [
+        "critical",
+        "high",
+        "medium",
+        "low",
+        "info"
+      ],
+      "description": "Required for kind=finding"
+    },
+    "category": {
+      "type": "string",
+      "description": "Check category. Critical categories: authn, authz, injection, secrets, data-exposure.",
+      "enum": [
+        "authn",
+        "authz",
+        "injection",
+        "xss",
+        "ssrf",
+        "secrets",
+        "data-exposure",
+        "sca",
+        "sast",
+        "iac",
+        "container",
+        "crypto",
+        "session",
+        "csrf",
+        "headers",
+        "cors",
+        "upload",
+        "error-handling",
+        "rate-limit",
+        "race",
+        "logging",
+        "deletion",
+        "tracking",
+        "policy-mismatch",
+        "privacy",
+        "legal",
+        "correctness",
+        "performance",
+        "ops",
+        "backup",
+        "accessibility",
+        "licensing",
+        "supply-chain",
+        "ai",
+        "platform",
+        "prompt-injection-content",
+        "other"
+      ]
+    },
+    "phase": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 13
+    },
+    "evidence_class": {
+      "enum": [
+        "EXPLOITED",
+        "TOOL-CONFIRMED",
+        "SUSPECTED",
+        "VERIFIED-ABSENT",
+        "NOT-TESTED"
+      ]
+    },
+    "not_tested_reason": {
+      "type": "string",
+      "description": "Required when evidence_class is NOT-TESTED, e.g. 'tool unavailable: semgrep'"
+    },
+    "status": {
+      "enum": [
+        "open",
+        "fix-proposed",
+        "fixed",
+        "waived",
+        "false-positive"
+      ],
+      "default": "open"
+    },
+    "location": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "file": {
+          "type": "string"
+        },
+        "line": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "end_line": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "endpoint": {
+          "type": "string",
+          "description": "e.g. 'GET /api/messages/:id'"
+        },
+        "component": {
+          "type": "string"
+        }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "description": "Artifacts backing the evidence class. Paths are relative to .release-gate/. Empty is only allowed for NOT-TESTED and SUSPECTED.",
+      "items": {
+        "type": "object",
+        "required": [
+          "type",
+          "path"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "enum": [
+              "tool-output",
+              "repro-script",
+              "request-response",
+              "har",
+              "screenshot",
+              "log",
+              "test-output",
+              "code-ref",
+              "other"
+            ]
+          },
+          "path": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        }
+      }
+    },
+    "tool": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "rule_id": {
+          "type": "string"
+        },
+        "scope": {
+          "type": "string",
+          "description": "What the tool scanned, e.g. 'full git history' or 'src/**/*.py'"
+        }
+      }
+    },
+    "verification": {
+      "type": "object",
+      "description": "How a tool finding was checked against the real code path before being marked TOOL-CONFIRMED (or rejected as a false positive).",
+      "additionalProperties": false,
+      "properties": {
+        "code_ref": {
+          "type": "string",
+          "description": "file:line that was read to verify"
+        },
+        "verdict": {
+          "enum": [
+            "confirmed",
+            "false-positive",
+            "unverified"
+          ]
+        },
+        "reason": {
+          "type": "string"
+        }
+      }
+    },
+    "cwe": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^CWE-[0-9]+$"
+      }
+    },
+    "impact": {
+      "type": "string",
+      "description": "Plain language: what an attacker or failure could do"
+    },
+    "repro": {
+      "type": "string",
+      "description": "Reproduction steps"
+    },
+    "fix": {
+      "type": "string",
+      "description": "Suggested fix"
+    },
+    "retest": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "status": {
+          "enum": [
+            "not-run",
+            "still-reproduces",
+            "no-longer-reproduces"
+          ]
+        },
+        "run_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "evidence_path": {
+          "type": "string"
+        }
+      }
+    },
+    "adversarial": {
+      "type": "object",
+      "description": "Result of the independent disprove-this subagent (required for critical/high findings and critical-category VERIFIED-ABSENT checks).",
+      "additionalProperties": false,
+      "properties": {
+        "required": {
+          "type": "boolean"
+        },
+        "outcome": {
+          "enum": [
+            "upheld",
+            "refuted",
+            "inconclusive",
+            "not-run"
+          ]
+        },
+        "summary": {
+          "type": "string"
+        },
+        "action_taken": {
+          "type": "string",
+          "description": "e.g. 'downgraded to SUSPECTED' or 're-ran check'"
+        }
+      }
+    },
+    "waiver_id": {
+      "type": "string"
+    },
+    "fingerprint": {
+      "type": "string",
+      "description": "Stable dedupe key computed by dedupe_findings.py"
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Tools/agents that reported this (after dedupe)"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "finding"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "severity"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "evidence_class": {
+            "const": "NOT-TESTED"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "not_tested_reason"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "evidence_class": {
+            "enum": [
+              "EXPLOITED",
+              "TOOL-CONFIRMED",
+              "VERIFIED-ABSENT"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "evidence": {
+            "minItems": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "evidence_class": {
+            "const": "VERIFIED-ABSENT"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "kind": {
+            "const": "check"
+          }
+        }
+      }
+    }
+  ]
+}

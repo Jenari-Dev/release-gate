@@ -1,0 +1,10 @@
+{
+  "name": "release-gate",
+  "version": "0.1.0",
+  "description": "Evidence-backed pre-release gate: security (static + dynamic), correctness, privacy, legal-document drafts and ops readiness, ending in an honest ship / no-ship verdict. Every result says whether it was proven, suspected, or not tested.",
+  "author": { "name": "JenAriDev", "url": "https://github.com/Jenari-Dev" },
+  "homepage": "https://github.com/Jenari-Dev/release-gate",
+  "repository": "https://github.com/Jenari-Dev/release-gate",
+  "license": "MIT",
+  "keywords": ["security", "release", "privacy", "compliance", "sast", "dast", "audit"]
+}

@@ -1,0 +1,22 @@
+fixture: vuln-static-trackers
+port: 3105              # fake analytics vendor: 3155 (GET /tracker.js, POST /collect, GET /pixel.gif, GET /_events, POST /_reset)
+expected_verdict: BLOCK
+# Static site + loopback-only fake analytics vendor. Verified 2026-10-18 in the Claude desktop built-in browser.
+# A real browser is required to observe the beacons; curl alone can see the <script src> and Set-Cookie.
+findings:
+  - id: AK-TRACK-1
+    category: tracking
+    expected_evidence_class: EXPLOITED
+    location: site/index.html:8
+    repro: "POST /_reset on :3155, load http://127.0.0.1:3105/ in a browser WITHOUT clicking anything -> observed GET /tracker.js, POST /collect (beacon with page/referrer/ua) and GET /pixel.gif at http://127.0.0.1:3155/_events, all before any consent click; document.cookie contains _trk_uid=<16 hex>. curl alone: index.html has <script src=\"http://127.0.0.1:3155/tracker.js\"> and GET /tracker.js returns Set-Cookie: _trk_uid=...."
+  - id: AK-TRACK-2
+    category: tracking
+    expected_evidence_class: EXPLOITED
+    location: site/consent.js:12
+    repro: "click Reject (localStorage consent=reject, banner hidden), reload -> observed tracker.js + beacon + pixel fire again and the _trk_uid cookie remains; reject has no effect on the tracker."
+  - id: AK-POLICY-1
+    category: policy-mismatch
+    expected_evidence_class: EXPLOITED
+    location: site/privacy.html:6
+    repro: "privacy.html states 'We do not use trackers, analytics or advertising cookies. We do not collect any information about your visit.' while AK-TRACK-1 shows the tracker, cookie and beacons on every page load."
+clean_must_not_flag: []   # vulnerable fixture

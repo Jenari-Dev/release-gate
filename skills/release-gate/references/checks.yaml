@@ -1,0 +1,320 @@
+# release-gate check catalog.
+#
+# Every check the skill knows about. report_build.py fills the coverage matrix
+# from this list, so a check that produced no recorded result shows up as
+# NOT-TESTED ("no result recorded") instead of silently disappearing.
+#
+# critical: true  -> a Critical-category check. SHIP needs it VERIFIED-ABSENT
+#                    (and upheld by adversarial verification).
+# modes           -> which run modes are expected to perform the check.
+# applies_when    -> optional config predicates; if they don't hold the check is
+#                    reported as "not applicable" rather than NOT-TESTED.
+#                    Supported keys: features.<name>, distribution (any of),
+#                    has_web_ui, has_server.
+schema_version: 1
+checks:
+  # ---------------------------------------------------------------- phase 1
+  - id: RECON-ATTACK-SURFACE
+    title: Attack surface enumerated (routes, methods, auth, inputs)
+    category: other
+    phase: 1
+    critical: false
+    modes: [full]
+  - id: RECON-DATA-INVENTORY
+    title: Data inventory built from code and confirmed by user
+    category: privacy
+    phase: 1
+    critical: false
+    modes: [full, legal]
+
+  # ---------------------------------------------------------------- phase 2
+  - id: SEC-SECRETS-HISTORY
+    title: Secrets in full git history (gitleaks)
+    category: secrets
+    phase: 2
+    critical: true
+    modes: [quick, full]
+  - id: SEC-SECRETS-VERIFIED
+    title: Live-secret verification (trufflehog --results=verified)
+    category: secrets
+    phase: 2
+    critical: true
+    modes: [full]
+  - id: SEC-SECRETS-ARTIFACTS
+    title: Secrets in client bundles, build artifacts and images
+    category: secrets
+    phase: 2
+    critical: true
+    modes: [full]
+  - id: SEC-SAST
+    title: Static analysis (semgrep + language tools)
+    category: sast
+    phase: 2
+    critical: false
+    modes: [quick, full]
+  - id: SEC-SCA
+    title: Known-vulnerable dependencies (osv-scanner + ecosystem auditor)
+    category: sca
+    phase: 2
+    critical: false
+    modes: [quick, full]
+  - id: SEC-IAC
+    title: IaC and container configuration (trivy config, hadolint, checkov)
+    category: iac
+    phase: 2
+    critical: false
+    modes: [full]
+  - id: SEC-SBOM
+    title: CycloneDX SBOM generated (syft)
+    category: supply-chain
+    phase: 2
+    critical: false
+    modes: [full]
+  - id: SEC-MANUAL-REVIEW
+    title: Manual review for logic flaws scanners miss
+    category: authz
+    phase: 2
+    critical: false
+    modes: [full]
+
+  # ---------------------------------------------------------------- phase 3
+  - id: DYN-APP-START
+    title: Application started locally with seeded test data
+    category: other
+    phase: 3
+    critical: false
+    modes: [full]
+    applies_when: {has_server: true}
+  - id: SEC-AUTHZ-MATRIX
+    title: Authorization matrix (every role x endpoint x other users' resources)
+    category: authz
+    phase: 3
+    critical: true
+    modes: [full]
+    applies_when: {has_server: true}
+  - id: SEC-INJECTION-DYNAMIC
+    title: Injection repros (SQLi, command, template, path traversal)
+    category: injection
+    phase: 3
+    critical: true
+    modes: [full]
+    applies_when: {has_server: true}
+  - id: SEC-XSS-DYNAMIC
+    title: Stored / reflected XSS repros
+    category: xss
+    phase: 3
+    critical: false
+    modes: [full]
+    applies_when: {has_web_ui: true}
+  - id: SEC-SSRF-DYNAMIC
+    title: SSRF repros against URL-fetching features
+    category: ssrf
+    phase: 3
+    critical: false
+    modes: [full]
+    applies_when: {has_server: true}
+  - id: SEC-AUTHN-BRUTEFORCE
+    title: Brute-force protection / rate limiting measured on auth endpoints
+    category: authn
+    phase: 3
+    critical: true
+    modes: [full]
+    applies_when: {features.accounts: true}
+  - id: SEC-AUTHN-ENUMERATION
+    title: Account enumeration via response differences
+    category: authn
+    phase: 3
+    critical: true
+    modes: [full]
+    applies_when: {features.accounts: true}
+  - id: SEC-SESSION
+    title: Session cookie flags, invalidation on logout / password change
+    category: session
+    phase: 3
+    critical: true
+    modes: [full]
+    applies_when: {features.accounts: true}
+  - id: SEC-CSRF
+    title: CSRF protection on state-changing requests
+    category: csrf
+    phase: 3
+    critical: false
+    modes: [full]
+    applies_when: {has_web_ui: true}
+  - id: SEC-HEADERS-CORS
+    title: Security headers and CORS with hostile origins
+    category: headers
+    phase: 3
+    critical: false
+    modes: [full]
+    applies_when: {has_server: true}
+  - id: SEC-UPLOADS
+    title: File upload validation, limits, served content-type
+    category: upload
+    phase: 3
+    critical: false
+    modes: [full]
+  - id: SEC-ERROR-LEAKS
+    title: Error responses leak no stack traces, SQL, paths or secrets
+    category: data-exposure
+    phase: 3
+    critical: true
+    modes: [full]
+    applies_when: {has_server: true}
+  - id: SEC-DAST-SCAN
+    title: ZAP baseline/API scan and nuclei safe templates
+    category: other
+    phase: 3
+    critical: false
+    modes: [full]
+    applies_when: {has_server: true}
+
+  # ---------------------------------------------------------------- phase 4
+  - id: COR-TEST-SUITE
+    title: Existing test suite pass/fail and coverage
+    category: correctness
+    phase: 4
+    critical: false
+    modes: [quick, full]
+  - id: COR-FUZZ
+    title: Property-based tests / fuzzing of parsers and input handlers
+    category: correctness
+    phase: 4
+    critical: false
+    modes: [full]
+  - id: COR-RACE
+    title: Race conditions on operations that must be atomic
+    category: race
+    phase: 4
+    critical: false
+    modes: [full]
+    applies_when: {has_server: true}
+
+  # ---------------------------------------------------------------- phase 5
+  - id: PERF-LOAD-PROFILES
+    title: Baseline / load / stress / spike / soak profiles
+    category: performance
+    phase: 5
+    critical: false
+    modes: [full]
+    applies_when: {has_server: true}
+  - id: PERF-FAILURE-MODES
+    title: Behaviour with DB down, third-party timeout, disk full
+    category: performance
+    phase: 5
+    critical: false
+    modes: [full]
+    applies_when: {has_server: true}
+
+  # ---------------------------------------------------------------- phase 6
+  - id: OPS-BACKUP-RESTORE
+    title: Backup restored into scratch environment and verified
+    category: backup
+    phase: 6
+    critical: false
+    modes: [full]
+    applies_when: {has_server: true}
+  - id: OPS-LOG-HYGIENE
+    title: No credentials or unnecessary personal data in captured logs
+    category: logging
+    phase: 6
+    critical: false
+    modes: [full]
+  - id: OPS-DEPLOY-CONFIG
+    title: Prod debug off, secrets from env, rollback + reversible migrations
+    category: ops
+    phase: 6
+    critical: false
+    modes: [full]
+  - id: OPS-EMAIL-DNS
+    title: SPF / DKIM / DMARC for sending domains
+    category: ops
+    phase: 6
+    critical: false
+    modes: [full]
+    applies_when: {features.sends_email: true}
+
+  # ---------------------------------------------------------------- phase 7
+  - id: PRIV-REGIME-MAPPING
+    title: Applicable privacy regimes mapped and obligations evaluated
+    category: privacy
+    phase: 7
+    critical: false
+    modes: [full, legal]
+  - id: PRIV-RIGHTS-TESTED
+    title: Export / deletion / correction executed for a test user and verified
+    category: deletion
+    phase: 7
+    critical: false
+    modes: [full, legal]
+    applies_when: {features.accounts: true}
+  - id: PRIV-COOKIE-AUDIT
+    title: Cookies / trackers before consent, after reject, after accept
+    category: tracking
+    phase: 7
+    critical: false
+    modes: [full, legal]
+    applies_when: {has_web_ui: true}
+  - id: PRIV-MINIMIZATION
+    title: Collected fields with no use in code
+    category: privacy
+    phase: 7
+    critical: false
+    modes: [full, legal]
+
+  # ---------------------------------------------------------------- phase 8
+  - id: LEGAL-POLICY-CONSISTENCY
+    title: Policy claims checked against data inventory and code
+    category: policy-mismatch
+    phase: 8
+    critical: false
+    modes: [quick, full, legal]
+  - id: LEGAL-DOCS-GENERATED
+    title: Applicable legal document drafts generated
+    category: legal
+    phase: 8
+    critical: false
+    modes: [full, legal]
+
+  # ---------------------------------------------------------------- phase 9-12
+  - id: PLAT-DISCLOSURES
+    title: Store privacy disclosures match the policy
+    category: platform
+    phase: 9
+    critical: false
+    modes: [full]
+    applies_when: {distribution: [mobile-app, browser-extension, game, desktop-app]}
+  - id: A11Y-AUTOMATED
+    title: axe-core / pa11y on key pages (WCAG 2.2 AA, automated subset)
+    category: accessibility
+    phase: 10
+    critical: false
+    modes: [full]
+    applies_when: {has_web_ui: true}
+  - id: SUP-LICENSES
+    title: Dependency and asset license compatibility
+    category: licensing
+    phase: 11
+    critical: false
+    modes: [full]
+  - id: SUP-PINNING
+    title: Lockfiles committed, CI actions pinned to SHAs, typosquat risk
+    category: supply-chain
+    phase: 11
+    critical: false
+    modes: [full]
+  - id: AI-PROMPT-INJECTION
+    title: Prompt injection through every user-controlled path into a prompt
+    category: ai
+    phase: 12
+    critical: false
+    modes: [full]
+    applies_when: {features.ai_features: true}
+
+  # ---------------------------------------------------------------- always
+  - id: META-REPO-INJECTION-CONTENT
+    title: Repository content that tries to instruct the agent
+    category: prompt-injection-content
+    phase: 1
+    critical: false
+    modes: [quick, full, legal]
