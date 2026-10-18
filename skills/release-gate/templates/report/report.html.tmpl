@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:">
+<meta name="color-scheme" content="light dark">
+<title>{{title}}</title>
+<style>
+:root{
+  --bg:#fbfaf7;--fg:#1d1d1b;--muted:#5f5e59;--line:#dedbd2;--card:#ffffff;--code:#f2f0ea;
+  --block:#b42318;--risk:#93370d;--ship:#067647;--none:#5f5e59;
+  --c-exploited:#b42318;--c-confirmed:#b54708;--c-suspected:#6941c6;--c-absent:#067647;--c-nottested:#5f5e59;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#141413;--fg:#ecebe6;--muted:#a3a29c;--line:#34332f;--card:#1d1d1b;--code:#262522;
+    --block:#f97066;--risk:#fdb022;--ship:#47cd89;--none:#a3a29c;
+    --c-exploited:#f97066;--c-confirmed:#fdb022;--c-suspected:#b692f6;--c-absent:#47cd89;--c-nottested:#a3a29c;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1100px;margin:0 auto;padding:24px 16px 64px}
+h1{font-size:1.6rem;margin:.2em 0}
+h2{margin-top:2em;border-bottom:1px solid var(--line);padding-bottom:.3em}
+h3{font-size:1.02rem;margin:1.4em 0 .4em}
+p,li{overflow-wrap:anywhere}
+.muted{color:var(--muted)}
+code{background:var(--code);padding:.05em .35em;border-radius:4px;font-size:.92em;overflow-wrap:anywhere}
+.meta{color:var(--muted);font-size:.92rem}
+
+/* Verdict: label text is always present; colour is secondary. */
+.verdict{display:inline-block;padding:.35em .8em;border-radius:8px;font-weight:700;letter-spacing:.02em;border:2px solid currentColor;background:var(--card)}
+.v-BLOCK{color:var(--block)}
+.v-SHIP-WITH-ACCEPTED-RISKS{color:var(--risk)}
+.v-SHIP{color:var(--ship)}
+.v-NOT-EVALUATED{color:var(--none)}
+
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--card)}
+table{border-collapse:collapse;width:100%;font-size:.88rem}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:var(--card);white-space:nowrap}
+
+/* Evidence class badges: distinct colour AND distinct glyph AND the class name as text. */
+.badge{display:inline-block;white-space:nowrap;font-weight:700;font-size:.8rem;padding:.1em .55em;border-radius:999px;border:2px solid currentColor;background:var(--card)}
+.badge::before{margin-right:.35em}
+.ec-EXPLOITED{color:var(--c-exploited)}
+.ec-EXPLOITED::before{content:"\25A0"}        /* filled square */
+.ec-TOOL-CONFIRMED{color:var(--c-confirmed)}
+.ec-TOOL-CONFIRMED::before{content:"\25C6"}   /* filled diamond */
+.ec-SUSPECTED{color:var(--c-suspected);border-style:double}
+.ec-SUSPECTED::before{content:"\25B2"}        /* filled triangle */
+.ec-VERIFIED-ABSENT{color:var(--c-absent)}
+.ec-VERIFIED-ABSENT::before{content:"\25CF"}  /* filled circle */
+.ec-NOT-TESTED{color:var(--c-nottested);border-style:dashed}
+.ec-NOT-TESTED::before{content:"\25CB"}       /* open circle */
+.ec-N-A{color:var(--c-nottested);border-style:dotted}
+.ec-N-A::before{content:"\2013"}
+
+.sev{font-weight:700;text-transform:uppercase;font-size:.8rem}
+.legend{display:flex;flex-wrap:wrap;gap:8px;margin:.6em 0}
+.counts{display:flex;flex-wrap:wrap;gap:8px 20px;margin:.8em 0;padding:0;list-style:none}
+.counts li strong{font-size:1.15rem}
+.finding{border:1px solid var(--line);border-radius:8px;background:var(--card);padding:10px 14px;margin:12px 0}
+.finding h3{margin-top:.2em}
+.finding dl{margin:.4em 0 0;display:grid;grid-template-columns:max-content 1fr;gap:2px 12px}
+.finding dt{color:var(--muted)}
+.finding dd{margin:0;overflow-wrap:anywhere}
+.disclaimer{border:2px solid var(--line);border-radius:8px;background:var(--card);padding:12px 16px;margin-top:2em}
+
+@media (max-width:640px){
+  th,td{padding:5px 6px}
+  .finding dl{grid-template-columns:1fr}
+}
+@media print{
+  :root{--bg:#fff;--fg:#000;--muted:#333;--line:#999;--card:#fff;--code:#eee}
+  body{font-size:11pt}
+  main{max-width:none;padding:0}
+  .tablewrap{overflow:visible;border-color:#999}
+  table{font-size:9pt}
+  tr,.finding{break-inside:avoid}
+  h2{break-after:avoid}
+  a{color:inherit;text-decoration:none}
+}
+</style>
+</head>
+<body>
+<main>
+<!--
+  release-gate report template. Rendering rules are in README.md next to this file.
+  {{name}}            scalar slot, HTML-escaped by the renderer.
+  {{#rows name}}...{{/rows}}   repeat the block once per row; inside it use {{field}}.
+  {{^rows name}}...{{/rows}}   emitted only when that list is empty.
+  Slots named evidence_class and verdict_class only ever receive enum values
+  (EXPLOITED, TOOL-CONFIRMED, SUSPECTED, VERIFIED-ABSENT, NOT-TESTED, N-A and
+  BLOCK, SHIP-WITH-ACCEPTED-RISKS, SHIP, NOT-EVALUATED).
+-->
+
+<header>
+  <h1>{{title}}</h1>
+  <p class="meta">Product: <strong>{{product}}</strong> &middot; Date: {{date}} &middot; Mode: <code>{{mode}}</code> &middot; Generated: {{generated_at}}</p>
+</header>
+
+<section id="verdict">
+  <h2>1. Verdict</h2>
+  <p><span class="verdict v-{{verdict_class}}">{{verdict}}</span></p>
+
+  <h3>Blocking</h3>
+  <ul>
+  {{#rows blocking}}
+    <li>{{text}}</li>
+  {{/rows}}
+  {{^rows blocking}}
+    <li class="muted">Nothing is blocking.</li>
+  {{/rows}}
+  </ul>
+
+  <h3>Why this verdict</h3>
+  <ul>
+  {{#rows reasons}}
+    <li>{{text}}</li>
+  {{/rows}}
+  </ul>
+
+  <ul class="counts" aria-label="Open findings by severity">
+    <li><strong>{{count_critical}}</strong> critical</li>
+    <li><strong>{{count_high}}</strong> high</li>
+    <li><strong>{{count_medium}}</strong> medium</li>
+    <li><strong>{{count_low}}</strong> low</li>
+    <li><strong>{{count_info}}</strong> info</li>
+  </ul>
+</section>
+
+<section id="legend">
+  <h2>Evidence classes</h2>
+  <p class="muted">Every row below carries exactly one class. The class name is always printed; the colour and symbol are extra cues.</p>
+  <div class="legend">
+    <span class="badge ec-EXPLOITED">EXPLOITED</span>
+    <span class="badge ec-TOOL-CONFIRMED">TOOL-CONFIRMED</span>
+    <span class="badge ec-SUSPECTED">SUSPECTED</span>
+    <span class="badge ec-VERIFIED-ABSENT">VERIFIED-ABSENT</span>
+    <span class="badge ec-NOT-TESTED">NOT-TESTED</span>
+  </div>
+  <ul class="muted">
+    <li>EXPLOITED: reproduced against a running instance, with a saved request and response.</li>
+    <li>TOOL-CONFIRMED: a tool reported it and the code path was read and confirmed.</li>
+    <li>SUSPECTED: from reading code or judgment; not reproduced.</li>
+    <li>VERIFIED-ABSENT: a specific test ran and the issue did not occur. It covers that test only.</li>
+    <li>NOT-TESTED: not checked. This is not a pass.</li>
+  </ul>
+</section>
+
+<section id="coverage">
+  <h2>2. Coverage matrix</h2>
+  <p class="muted">What was actually checked, and how strong the evidence is.</p>
+  <div class="tablewrap">
+  <table>
+    <thead>
+      <tr><th>Check</th><th>Phase</th><th>Critical</th><th>Evidence class</th><th>Result</th><th>Detail</th><th>Artifact</th></tr>
+    </thead>
+    <tbody>
+    {{#rows coverage}}
+      <tr>
+        <td><code>{{id}}</code> {{title}}</td>
+        <td>{{phase}}</td>
+        <td>{{critical}}</td>
+        <td><span class="badge ec-{{evidence_class}}">{{evidence_label}}</span></td>
+        <td>{{result}}</td>
+        <td>{{detail}}</td>
+        <td>{{artifacts}}</td>
+      </tr>
+    {{/rows}}
+    {{^rows coverage}}
+      <tr><td colspan="7" class="muted">No coverage rows were produced.</td></tr>
+    {{/rows}}
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section id="findings">
+  <h2>3. Findings</h2>
+  <div class="tablewrap">
+  <table>
+    <thead>
+      <tr><th>ID</th><th>Severity</th><th>Evidence class</th><th>Title</th><th>Location</th><th>Status</th></tr>
+    </thead>
+    <tbody>
+    {{#rows findings}}
+      <tr>
+        <td><code>{{id}}</code></td>
+        <td><span class="sev">{{severity}}</span></td>
+        <td><span class="badge ec-{{evidence_class}}">{{evidence_label}}</span></td>
+        <td>{{title}}</td>
+        <td><code>{{location}}</code></td>
+        <td>{{status}}</td>
+      </tr>
+    {{/rows}}
+    {{^rows findings}}
+      <tr><td colspan="6" class="muted">No findings were recorded. Read this together with the coverage matrix: unchecked areas are listed there as NOT-TESTED.</td></tr>
+    {{/rows}}
+    </tbody>
+  </table>
+  </div>
+
+  {{#rows findings}}
+  <article class="finding">
+    <h3><code>{{id}}</code> <span class="sev">{{severity}}</span> <span class="badge ec-{{evidence_class}}">{{evidence_label}}</span></h3>
+    <p>{{title}}</p>
+    <dl>
+      <dt>Location</dt><dd><code>{{location}}</code></dd>
+      <dt>What this means</dt><dd>{{impact}}</dd>
+      <dt>Reproduce</dt><dd>{{repro}}</dd>
+      <dt>Suggested fix</dt><dd>{{fix}}</dd>
+      <dt>Reported by</dt><dd>{{tool}}</dd>
+      <dt>Evidence</dt><dd>{{artifacts}}</dd>
+    </dl>
+  </article>
+  {{/rows}}
+</section>
+
+<section id="not-tested">
+  <h2>4. NOT-TESTED</h2>
+  <p class="muted">Checks that applied to this product and were not run, with the exact reason. None of these is a pass.</p>
+  <div class="tablewrap">
+  <table>
+    <thead>
+      <tr><th>Check</th><th>Evidence class</th><th>Reason</th></tr>
+    </thead>
+    <tbody>
+    {{#rows not_tested}}
+      <tr>
+        <td><code>{{id}}</code> {{title}}</td>
+        <td><span class="badge ec-NOT-TESTED">NOT-TESTED</span></td>
+        <td>{{reason}}</td>
+      </tr>
+    {{/rows}}
+    {{^rows not_tested}}
+      <tr><td colspan="3" class="muted">Every applicable check in this mode has a recorded result.</td></tr>
+    {{/rows}}
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section id="limitations">
+  <h2>5. Limitations</h2>
+  <ul>
+  {{#rows limitations}}
+    <li>{{text}}</li>
+  {{/rows}}
+  </ul>
+</section>
+
+<section id="disclaimer" class="disclaimer">
+  <h2>Disclaimer</h2>
+  <p>{{disclaimer}}</p>
+</section>
+
+</main>
+</body>
+</html>

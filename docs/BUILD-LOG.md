@@ -80,3 +80,54 @@ Clean twins land **SHIP WITH ACCEPTED RISKS**, not bare SHIP, and the scorer cou
 3. The automated eval does not run the adversarial-verification subagent, so critical VERIFIED-ABSENT is never "upheld" and clean twins cannot reach bare SHIP in the harness. Real runs with the subagent can.
 4. Static SCA/secret findings are upgraded SUSPECTED→TOOL-CONFIRMED by a deterministic re-read of the cited path (secret-shaped value present / vulnerable version pinned); SAST and logic findings are left for the agent's manual read.
 5. ZAP/nuclei are installed and documented in phase 03 but not yet exercised by the eval harness (SEC-DAST is non-critical); wire a smoke run in session 3.
+
+## Session 3 — 2026-10-18 — remaining phases, run modes, discovery-mode eval
+
+### Built
+- **Discovery-mode eval (priority).** `evals/discovery.py` + `run_evals.py --mode guided|discovery|both`. Discovery plans the dynamic tests from the recovered surface, not the answer keys. Only per-target inputs: port, start command, seeded credentials (a seeded test DB is allowed by SKILL principle 3).
+  - `scripts/extract_routes.py` — framework-semantic route/attack-surface extractor (Express, FastAPI/Starlette, Flask, OpenAPI): method, path, auth (inferred from middleware/dependency *names*, not a per-app list), path/query/body params. Both vuln and clean twins produce identical surfaces, as they should.
+  - Login shape (form vs json, token field) is probed, not declared. Test users come from the app's own signup route where one exists, else the seeded fallback. SSRF is pointed at a canary listener the harness starts itself (not the fixture's built-in canary). Object-level authz learns each user's own ids from a collection endpoint, then tries ids they don't own — EXPLOITED only when ownership is *observed*; where no collection endpoint exists, it stays SUSPECTED (a miss is a miss).
+  - `tests/test_discovery_no_literals.py` fails if any fixture endpoint path, canary, coupon code or owner map literal appears in the discovery code. `tests/test_extract_routes.py` covers the parser.
+- **Phase references** 04, 05, 06, 09, 10, 11, 12 (playbooks matching the existing seven). **Stacks notes** `references/stacks/*` (13 stacks + README). **Run modes** `references/modes/{quick,retest,ci,explain}.md` with `scripts/retest.py` (marks `fixed` only when the original repro no longer reproduces, with new evidence) and `scripts/explain_finding.py` (never changes a class/status). **Templates** `templates/ci/github-actions-release-gate.yml` (actions SHA-pinned + verified), `templates/k6/{load,stress,spike,soak}.js` (loopback guard), `templates/report/report.html.tmpl` (self-contained, CSP, light/dark).
+- **Session-2 open issues closed:** #1 `normalize_findings.py` now stamps `check_id` per finding by category, so static findings land in the coverage matrix. #2 `authz_matrix.py` gained a **positive control** — if no owner can read their own resource, it reports NOT-TESTED, never a false VERIFIED-ABSENT from a silent login failure — plus nested `token_field` and configurable login field names. (Issue #5, ZAP/nuclei smoke in the harness, carried to session 4: ZAP startup is too heavy to add cheaply here; it remains documented in phase 03.)
+
+### Measured eval scores (full both-mode run, 2026-10-18)
+
+**Guided** (hand-fed bug locations — reproduces session 2 exactly; measures "given the right endpoints, do the scripts reproduce/classify/grade correctly with no false positives and a correct verdict"):
+
+| Fixture | Verdict | Score |
+|---|---|---|
+| vuln-node-express | BLOCK | 10/10 detected, 10/10 class correct, IDOR EXPLOITED |
+| vuln-python-fastapi | BLOCK | 10/10 detected, 10/10 class correct, IDOR EXPLOITED |
+| vuln-static-trackers | BLOCK | 3/3 detected |
+| clean-node-express | SHIP WITH ACCEPTED RISKS | 0 false positives |
+| clean-python-fastapi | SHIP WITH ACCEPTED RISKS | 0 false positives |
+| clean-static-trackers | SHIP WITH ACCEPTED RISKS | 0 false positives |
+| honesty-wont-start | BLOCK | "insufficient evidence"; never a pass |
+| honesty-no-tools | (no verdict) | all tool-backed checks NOT-TESTED; never a pass |
+
+**Discovery** (no per-fixture plan; the skill recovers the surface itself — the honest detection number, expected lower; the extractor was written from framework semantics, never tuned against the answer keys):
+
+| Fixture | Verdict | Score |
+|---|---|---|
+| vuln-node-express | BLOCK | 7/10 detected, IDOR **EXPLOITED** (ownership observed via collection endpoint); misses: stored XSS, credential-in-log, coupon race |
+| vuln-python-fastapi | BLOCK | 10/10 detected, IDOR **SUSPECTED** not EXPLOITED (no collection endpoint, so ownership can't be proven) — class correct 7/10 |
+| vuln-static-trackers | BLOCK | 3/3 detected (cookie audit needs only the URL, so discovery == guided for web) |
+| clean-node-express | SHIP WITH ACCEPTED RISKS | 0 false positives |
+| clean-python-fastapi | SHIP WITH ACCEPTED RISKS | 0 false positives |
+| clean-static-trackers | SHIP WITH ACCEPTED RISKS | 0 false positives |
+| honesty-wont-start | BLOCK | "insufficient evidence"; never a pass |
+| honesty-no-tools | (no verdict) | all tool-backed checks NOT-TESTED; never a pass |
+
+**What discovery misses, and why (honest):** stored XSS and credential-in-log need a stored-and-rendered sink pair / a known log location that discovery doesn't auto-identify from the surface; the coupon race needs a valid single-use token that isn't creatable or a documented input; the FastAPI IDOR can't reach EXPLOITED because, with no collection endpoint, the harness can't learn who owns which record. These stay SUSPECTED or NOT-TESTED and are scored as misses. Clean twins reach SHIP in discovery because the generic probes discovery *can* run (authz with positive control, SSRF to the harness canary, SQLi error/union, rate-limit, enumeration, error-leaks, session marker) cover enough critical checks to clear the full-mode "insufficient evidence" gate without any hand-fed data.
+
+### Verified (by this session)
+- `pytest`: 500 passed.
+- Full `run_evals.py --mode both` reproduces both tables above across three runs; vuln fixtures BLOCK, honesty fixtures never pass in either mode, clean twins never false-positive.
+- `extract_routes.py` recovers identical surfaces for each vuln/clean twin pair; `test_discovery_no_literals.py` confirms no fixture answers are baked into the discovery code.
+
+### Open issues carried forward
+1. The automated eval still does not run the adversarial-verification subagent, so a critical VERIFIED-ABSENT is never "upheld" and clean twins land SHIP WITH ACCEPTED RISKS, not bare SHIP, in the harness. (Session 4 end-to-end agent eval exercises the real subagent path.)
+2. Discovery's FastAPI IDOR is SUSPECTED because there is no collection endpoint to establish ownership; a message-create endpoint or an OpenAPI ownership hint would let it reach EXPLOITED. Left honest rather than special-cased.
+3. ZAP/nuclei are installed and documented in phase 03 but still not exercised by the eval harness (SEC-DAST non-critical; ZAP startup too heavy to add cheaply). Wire a smoke run in session 4 if cheap.
+4. Discovery does not yet auto-identify a stored-XSS sink pair, a credential-log location, or a creatable single-use token; these are the main discovery gaps and candidates for session-4 heuristics.

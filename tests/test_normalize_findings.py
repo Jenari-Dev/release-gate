@@ -636,3 +636,22 @@ def test_auto_ignores_run_tool_result_json(tmp_path, capsys):
     (ev / "gitleaks.json").write_text("[]")
     assert nf.main(["--auto", str(tmp_path / "evidence"), "--out", str(tmp_path / "o.json")]) == 0
     assert "result.json" not in capsys.readouterr().err
+
+
+# ---------------------------------------------------------------- check_id stamping (issue #1)
+
+def test_check_id_stamped_by_category():
+    R = nf.Raw
+    assert nf._check_id_for(R(title="x", severity="high", category="sast"), "semgrep") == "SEC-SAST"
+    assert nf._check_id_for(R(title="x", severity="high", category="sca"), "osv-scanner") == "SEC-SCA"
+    assert nf._check_id_for(R(title="x", severity="high", category="secrets"), "gitleaks") == "SEC-SECRETS-HISTORY"
+    assert nf._check_id_for(R(title="x", severity="high", category="secrets"), "trufflehog") == "SEC-SECRETS-VERIFIED"
+    assert nf._check_id_for(R(title="x", severity="high", category="container"), "hadolint") == "SEC-IAC"
+    assert nf._check_id_for(R(title="x", severity="low", category="other"), "zap") is None
+
+
+def test_finding_entry_includes_check_id():
+    raw = nf.Raw(title="SQL injection", severity="high", category="sca")
+    entry = nf.finding_entry(raw, "osv-scanner", nf.Parsed(), nf.Ctx(), [{"type": "tool-output", "path": "x"}],
+                             "2026-10-18T00:00:00Z")
+    assert entry["check_id"] == "SEC-SCA"

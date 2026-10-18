@@ -127,3 +127,79 @@ def test_entries_validate_against_schema(server, tmp_path):
     import rglib
     for e in entries:
         assert rglib.validate(e, "finding") == [], e
+
+
+# ---------------------------------------------------------------- positive control (issue #2)
+
+def make_login_broken_handler():
+    """Resources need auth, but /login never returns a usable token: a real app
+    where the harness cannot authenticate. Every request ends up anonymous 401."""
+    class H(BaseHTTPRequestHandler):
+        def log_message(self, *a):
+            pass
+
+        def _json(self, code, obj):
+            self.send_response(code)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps(obj).encode())
+
+        def do_POST(self):
+            n = int(self.headers.get("Content-Length", 0))
+            self.rfile.read(n)
+            self._json(200, {"session_established": True})  # 2xx but NO token field
+
+        def do_GET(self):
+            caller = TOKENS.get(self.headers.get("Authorization", "").removeprefix("Bearer "))
+            if caller is None:
+                return self._json(401, {"error": "unauthenticated"})
+            return self._json(200, {"ok": True})
+    return H
+
+
+@pytest.fixture
+def broken_login_server():
+    created = []
+
+    def start():
+        srv = ThreadingHTTPServer(("127.0.0.1", 0), make_login_broken_handler())
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        created.append(srv)
+        return f"http://127.0.0.1:{srv.server_address[1]}"
+
+    yield start
+    for s in created:
+        s.shutdown()
+
+
+def test_failed_positive_control_is_not_tested_not_a_pass(broken_login_server, tmp_path):
+    """If no owner can read their own resource, a wall of cross-user 401s must NOT
+    be reported as VERIFIED-ABSENT. That would be a false pass from a login failure."""
+    base = broken_login_server()
+    state = tmp_path / ".release-gate"
+    (state / "evidence").mkdir(parents=True)
+    entries = am.run_matrix(spec_for(base), scope_for(base), state)
+    assert len(entries) == 1
+    assert entries[0]["evidence_class"] == "NOT-TESTED"
+    assert "positive control" in entries[0]["not_tested_reason"].lower()
+    assert entries[0]["evidence_class"] != "VERIFIED-ABSENT"
+
+
+def test_nested_token_field(server, tmp_path):
+    """token_field supports a dotted path into the login response."""
+    base = server(enforce=True)
+    sp = spec_for(base)
+    # the fixture server returns {"token": ...}; a dotted path to a missing key yields no token
+    sp["login"]["token_field"] = "data.token"
+    state = tmp_path / ".release-gate"
+    (state / "evidence").mkdir(parents=True)
+    entries = am.run_matrix(sp, scope_for(base), state)
+    # with no token resolvable, the positive control fails -> NOT-TESTED (honest)
+    assert entries[0]["evidence_class"] == "NOT-TESTED"
+
+
+def test_dig_helper():
+    assert am._dig({"data": {"token": "abc"}}, "data.token") == "abc"
+    assert am._dig({"token": "abc"}, "token") == "abc"
+    assert am._dig({"data": {}}, "data.token") is None
+    assert am._dig({"x": 1}, "y") is None

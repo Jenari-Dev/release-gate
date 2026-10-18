@@ -795,6 +795,28 @@ def _drop_none(d: dict) -> dict:
     return {k: v for k, v in d.items() if k == "evidence" or v not in (None, "", [], {})}
 
 
+# Which catalog check (checks.yaml) a static finding evidences, by category. Stamping
+# this lets report_build's coverage matrix count the finding against its check instead
+# of leaving the check NOT-TESTED while the finding floats by severity only (issue #1).
+# Secrets split by tool: gitleaks scans history, trufflehog verifies live secrets.
+CATEGORY_CHECK_ID = {
+    "sast": "SEC-SAST",
+    "sca": "SEC-SCA",
+    "iac": "SEC-IAC",
+    "container": "SEC-IAC",
+    "injection": "SEC-INJECTION-DYNAMIC",
+    "xss": "SEC-XSS-DYNAMIC",
+    "ssrf": "SEC-SSRF-DYNAMIC",
+    "authz": "SEC-AUTHZ-MATRIX",
+}
+
+
+def _check_id_for(raw: Raw, tool: str) -> str | None:
+    if raw.category == "secrets":
+        return "SEC-SECRETS-VERIFIED" if (raw.tool_name or tool) == "trufflehog" else "SEC-SECRETS-HISTORY"
+    return CATEGORY_CHECK_ID.get(raw.category)
+
+
 def finding_entry(raw: Raw, tool: str, parsed: Parsed, ctx: Ctx, evidence: list[dict], now: str) -> dict:
     secrets = raw.category == "secrets"
     title = clean(raw.title, 200, secrets)
@@ -803,6 +825,7 @@ def finding_entry(raw: Raw, tool: str, parsed: Parsed, ctx: Ctx, evidence: list[
     reason = clean(raw.note, 200) if raw.note else None
     return _drop_none({
         "kind": "finding",
+        "check_id": _check_id_for(raw, tool),
         "title": title,
         "severity": raw.severity,
         "category": raw.category,

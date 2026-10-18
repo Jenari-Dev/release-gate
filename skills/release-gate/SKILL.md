@@ -5,12 +5,13 @@ description: Run a company-grade pre-release gate on any software project (web a
 
 # release-gate
 
-> BUILD STATUS: session 2 of 4. The minimum viable skill works end to end:
-> phases 0, 1, 2, 3, 7, 8 and 13 have playbooks in `references/`, backed by the
-> scripts and the pinned tools. Phases 4, 5, 6, 9, 10, 11, 12 and the quick /
-> retest / ci / explain modes land in session 3; until a phase's reference file
-> exists, report it as `NOT-TESTED: phase not implemented in this release-gate
-> version`. Never improvise a phase and call it done.
+> BUILD STATUS: session 3 of 4. All thirteen phases (0–13) have playbooks in
+> `references/`, the quick / retest / ci / explain modes are documented in
+> `references/modes/`, per-stack notes are in `references/stacks/`, and CI / k6 /
+> report templates are in `templates/`. The eval harness runs in both **guided**
+> and **discovery** modes. Still improvise nothing: if a phase's reference or a
+> tool is missing at run time, report `NOT-TESTED` with the exact reason, never a
+> pass. Session 4 is polish + the end-to-end agent eval + publish.
 
 ## Non-negotiable principles (everything else is subordinate)
 
@@ -75,9 +76,12 @@ Write for a solo developer. Lead with what an attacker could do, then the techni
 | `run_tool.py --project P --tool T [--target URL --test-type X] -- args` | run a tool, capture evidence, enforce scope |
 | `normalize_findings.py` / `dedupe_findings.py` | tool output → one findings schema (starts `SUSPECTED`) → merged |
 | `data_inventory_scan.py --project P` | build the DRAFT data inventory from code (phase 1); single source of truth for privacy/legal |
-| `authz_matrix.py --project P --spec S` | roles × endpoints × other users' resources (phase 3); IDOR → `EXPLOITED` with saved request/response |
+| `extract_routes.py --project P [--json]` | recover the HTTP attack surface from framework semantics (phase 1): method, path, auth, path/query/body params. Powers recon and the authz spec; knows no specific app |
+| `authz_matrix.py --project P --spec S` | roles × endpoints × other users' resources (phase 3); IDOR → `EXPLOITED` with saved request/response. Positive control: if no owner can read their own resource, reports NOT-TESTED, never a false pass |
 | `cookie_audit.mjs --url U --out F` | Playwright: cookies/trackers before consent, after reject, after accept (phase 7) |
 | `policy_consistency.py --project P --policy F` | policy claims vs the inventory (phase 8); contradictions are `policy-mismatch` findings |
+| `retest.py plan\|apply --project P [--new N]` | re-run only previously-failing checks; marks `fixed` only when the original repro no longer reproduces with new evidence (retest mode) |
+| `explain_finding.py --project P <id>` | plain-language explanation of one finding (explain mode); never changes a class or status |
 | `report_build.py --project P --mode M` | verdict + md/html/sarif/json report; runs the lint |
 | `report_lint.py` | banned phrases, passes without artifacts, missing classes, secrets |
 
@@ -90,10 +94,17 @@ Load the one reference file for the phase you are in, do the phase, then move on
 | 1 | `references/01-recon-and-data-map.md` | attack surface; `data_inventory_scan.py` → confirmed `data-inventory.yaml` |
 | 2 | `references/02-static-security.md` | secrets, SAST (vendored semgrep), SCA, IaC, SBOM, manual review |
 | 3 | `references/03-dynamic-security.md` | start app in scope; `authz_matrix.py`; per-finding repros; ZAP/nuclei safe scans |
+| 4 | `references/04-correctness-testing.md` | project's own test suite, fuzz/property tests, concurrency/race probes |
+| 5 | `references/05-performance-stress.md` | k6 load/stress/spike/soak (loopback or owned staging only); thresholds the user confirms |
+| 6 | `references/06-ops-resilience.md` | backup/restore, log hygiene, deploy config, email/DNS (read-only, authorised) |
 | 7 | `references/07-privacy-compliance.md` | regimes from `references/law/`; rights tests; `cookie_audit.mjs`; minimisation |
 | 8 | `references/08-legal-documents.md` | drafts from `templates/legal/` (DRAFT header); `policy_consistency.py` |
+| 9 | `references/09-platform-requirements.md` | store / extension disclosure requirements vs the data inventory |
+| 10 | `references/10-accessibility.md` | Playwright automated a11y subset (+ axe-core only if the project ships it) |
+| 11 | `references/11-supply-chain-licensing.md` | SBOM licenses vs project license; pinning, CI action SHAs |
+| 12 | `references/12-ai-features.md` | indirect prompt injection, tool scope, output sinks, cost limits, AI disclosure |
 | 13 | `references/13-report-and-verdict.md` | merge, adversarial sweep, `report_build.py`, lint, verdict |
 
-Phases 4, 5, 6, 9, 10, 11, 12 and the quick/retest/ci/explain modes are not in this version; report them `NOT-TESTED: phase not implemented in this release-gate version`.
+Run modes have their own playbooks: `references/modes/{quick,retest,ci,explain}.md`. Per-stack detection and gotchas: `references/stacks/`. If a reference, tool or payload is missing at run time, report the affected check `NOT-TESTED` with the exact reason — never a pass.
 
 State lives in `<project>/.release-gate/` (`config.yaml`, `scope.yaml`, `data-inventory.yaml`, `waivers.yaml`, `findings.json`, `evidence/`, `history/`, `reports/`). Schemas: `schemas/`. Check catalog (drives the coverage matrix): `references/checks.yaml`. Law reference data: `references/law/`. Legal draft templates: `templates/legal/`.

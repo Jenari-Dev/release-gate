@@ -233,10 +233,13 @@ def probe_analytics_beacon(base, state, username, password, sink_events_url, sin
     return entry
 
 
-def probe_error_leaks(base, state):
-    """Trigger server errors and check the response leaks no stack trace, SQL or path."""
-    probes_urls = ["/api/messages/not-an-int", "/api/messages/999999999999999999999",
-                   "/api/search?q=%ff%00", "/api/fetch-preview?url=::::"]
+def probe_error_leaks(base, state, paths=None):
+    """Trigger server errors and check the response leaks no stack trace, SQL or path.
+
+    `paths` overrides the probe URLs; discovery mode passes URLs built from the
+    endpoints it recovered, so no fixture paths are hardcoded on that path."""
+    probes_urls = paths or ["/api/messages/not-an-int", "/api/messages/999999999999999999999",
+                            "/api/search?q=%ff%00", "/api/fetch-preview?url=::::"]
     leaked = []
     sample = []
     for path in probes_urls:

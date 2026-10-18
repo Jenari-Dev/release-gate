@@ -22,14 +22,19 @@ the running app and report what they saw. Run from the repo root:
 from __future__ import annotations
 
 import argparse
+import http.server
 import json
 import os
+import re
+import secrets
 import shutil
 import socket
 import subprocess
 import sys
 import tempfile
+import threading
 import time
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -47,6 +52,8 @@ import data_inventory_scan  # noqa: E402
 import policy_consistency  # noqa: E402
 import report_build  # noqa: E402
 import probes  # noqa: E402
+import extract_routes  # noqa: E402
+import discovery  # noqa: E402
 
 CLASS_RANK = {"NOT-TESTED": 0, "SUSPECTED": 1, "VERIFIED-ABSENT": 1, "TOOL-CONFIRMED": 2, "EXPLOITED": 3}
 SEMGREP_ENV = {"SEMGREP_SEND_METRICS": "off", "SEMGREP_ENABLE_VERSION_CHECK": "0"}
@@ -443,6 +450,157 @@ def _extract_policy(project: Path, plan: dict) -> Path | None:
     return None
 
 
+# --------------------------------------------------------------------------- discovery mode
+
+class _CanaryHandler(http.server.BaseHTTPRequestHandler):
+    canary = "x"
+
+    def do_GET(self):  # noqa: N802
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(self.canary.encode())
+
+    def log_message(self, *a):  # silence
+        pass
+
+
+def start_canary() -> tuple[object, str, str]:
+    """Start a harness-owned HTTP canary listener for the SSRF probe. Returns
+    (server, url, token). This is NOT the fixture's built-in canary."""
+    token = "RG-DISCOVERY-CANARY-" + secrets.token_hex(8)
+    handler = type("H", (_CanaryHandler,), {"canary": token})
+    srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    host, port = srv.server_address[0], srv.server_address[1]
+    return srv, f"http://{host}:{port}/latest/meta-data/", token
+
+
+def _not_tested(check_id, category, title, reason, phase=3):
+    return {"id": f"RG-{category.upper().replace('-', '')}-970", "kind": "check", "check_id": check_id,
+            "category": category, "title": title, "evidence_class": "NOT-TESTED",
+            "not_tested_reason": reason, "evidence": [], "phase": phase}
+
+
+def run_dynamic_discovery(project: Path, plan: dict, base_url: str, routes: list[dict],
+                          seeded: list[tuple[str, str]]) -> list[dict]:
+    """Dynamic tests driven only by the discovered surface + seeded creds.
+    No hand-fed endpoints, owner maps, canaries or coupon codes."""
+    state = rglib.state_dir(project)
+    scope = rglib.load_data(state / "scope.yaml", {})
+    entries: list[dict] = []
+
+    if plan.get("web"):
+        audit = _cookie_audit(base_url, state)
+        if audit is not None:
+            entries.append(audit)
+        return entries
+
+    dplan = discovery.build_plan(base_url, routes, seeded)
+    principals = dplan["_principals_full"]
+
+    # ---- authorization matrix (observed ownership only reaches EXPLOITED)
+    if dplan["authz_spec"]:
+        authz = authz_matrix.run_matrix(dplan["authz_spec"], scope, state)
+        if dplan["authz_mode"] != "observed":
+            # ownership was not learned from a collection endpoint: a cross-user 2xx
+            # is only SUSPECTED, not proven, so downgrade honestly.
+            for e in authz:
+                if e.get("evidence_class") == "EXPLOITED":
+                    e["evidence_class"] = "SUSPECTED"
+                    e["severity"] = "high"
+                    e["note"] = ("cross-principal access observed but resource ownership could not be "
+                                 "confirmed (no collection endpoint to learn owned ids); needs a manual owner check")
+                    e.pop("adversarial", None)
+        entries += authz
+    else:
+        entries.append(_not_tested("SEC-AUTHZ-MATRIX", "authz", "Authorization matrix",
+                                   "no auth-required id-addressed endpoint and login could be discovered from the surface"))
+
+    token = principals[0]["token"] if principals else None
+
+    # ---- SQL injection (error/union heuristic on a discovered open query endpoint)
+    qe = dplan["query_endpoint"]
+    if qe:
+        entries.append(probes.probe_sqli(base_url, state, search_path=qe["route"]["path"]))
+    else:
+        entries.append(_not_tested("SEC-INJECTION-DYNAMIC", "injection", "SQL injection",
+                                   "no open query endpoint discovered to probe"))
+
+    # ---- SSRF against the harness canary listener
+    uf = dplan["url_fetch"]
+    if uf:
+        srv, canary_url, canary_tok = start_canary()
+        try:
+            path = uf["route"]["path"]
+            # probe_ssrf targets a fixed /api/fetch-preview path; call the route we found.
+            entries.append(_discovery_ssrf(base_url, state, token, path, uf["param"], canary_url, canary_tok))
+        finally:
+            srv.shutdown()
+    else:
+        entries.append(_not_tested("SEC-SSRF-DYNAMIC", "ssrf", "SSRF",
+                                   "no url-shaped parameter discovered to probe"))
+
+    # ---- brute-force / rate limit + username enumeration on the discovered login
+    if dplan["login_shape"] and principals:
+        enc = dplan["login_shape"]["encoding"]
+        entries.append(probes.probe_rate_limit(base_url, state, principals[0]["username"], encoding=enc))
+        entries.append(probes.probe_enumeration(base_url, state, principals[0]["username"], encoding=enc))
+    else:
+        entries.append(_not_tested("SEC-AUTHN-BRUTEFORCE", "rate-limit", "Login brute-force protection",
+                                   "login endpoint could not be discovered"))
+        entries.append(_not_tested("SEC-AUTHN-ENUMERATION", "authn", "Username enumeration",
+                                   "login endpoint could not be discovered"))
+
+    # ---- session handling (same generic marker as guided: token auth, no logout route)
+    entries.append({"id": "RG-SESSION-900", "kind": "check", "check_id": "SEC-SESSION", "category": "session",
+                    "title": "Session cookie flags / invalidation", "evidence_class": "NOT-TESTED",
+                    "not_tested_reason": "token-based auth with no logout endpoint discovered; cookie flags not applicable and invalidation not exercised",
+                    "evidence": [], "phase": 3})
+
+    # ---- error-handling leaks, probing the endpoints we discovered (no fixture paths)
+    leak_paths = []
+    for item in discovery.find_object_endpoints(routes):
+        leak_paths.append(re.sub(r":[A-Za-z_]\w*|\{[A-Za-z_]\w*\}", "not-an-int", item["path"]))
+    if qe:
+        leak_paths.append(qe["route"]["path"] + "?" + urllib.parse.urlencode({qe["param"]: "%ff%00"}))
+    if leak_paths:
+        entries.append(probes.probe_error_leaks(base_url, state, paths=leak_paths))
+    else:
+        entries.append(_not_tested("SEC-ERROR-LEAKS", "data-exposure", "Error-handling leaks",
+                                   "no endpoint discovered to trigger an error response"))
+
+    # ---- account deletion (only when both signup and a self-delete endpoint exist)
+    if dplan["signup"] and dplan["delete_self"] and dplan["login_shape"]:
+        entries.append(probes.probe_deletion(base_url, state, encoding=dplan["login_shape"]["encoding"]))
+
+    # ---- things discovery cannot plan without answer-key inputs: recorded honestly
+    entries.append(_not_tested("COR-RACE", "race", "Single-use resource race condition",
+                               "needs a valid single-use token (e.g. coupon code); none is creatable or a documented input",
+                               phase=4))
+    entries.append(_not_tested("LEGAL-POLICY-CONSISTENCY", "policy-mismatch", "Policy vs runtime data sharing",
+                               "analytics/telemetry sink address is not a discoverable input; checked statically only", phase=7))
+    entries.append(_not_tested("SEC-XSS-DYNAMIC", "xss", "Stored XSS",
+                               "stored-and-rendered sink pair not auto-identified in discovery mode"))
+    return entries
+
+
+def _discovery_ssrf(base, state, token, path, param, canary_url, canary_token):
+    import urllib.parse as _up
+    url = base.rstrip("/") + path + "?" + _up.urlencode({param: canary_url})
+    headers = {"Authorization": f"Bearer {token}"} if token else {}
+    st, body = probes._req("GET", url, headers=headers)
+    txt = f"GET {url}\n-> HTTP {st}\n{body[:1500]}"
+    if st == 200 and canary_token in body:
+        return probes._finding("RG-SSRF-901", "SEC-SSRF-DYNAMIC", "ssrf", "high",
+                               "SSRF: server fetches an attacker-supplied URL", "EXPLOITED", state, "ssrf.txt", txt,
+                               cwe=["CWE-918"],
+                               impact="The server fetches a URL supplied by the caller and returns its body; a harness-controlled canary was read back.",
+                               repro=f"GET {path}?{param}=<harness canary URL>; the canary token appeared in the response.",
+                               fix="Allowlist destination hosts, resolve and reject private IPs, disable redirects.")
+    return probes._check_absent("SEC-SSRF-DYNAMIC", "ssrf", "SSRF to the harness canary blocked", state,
+                               "ssrf_absent.txt", txt)
+
+
 # --------------------------------------------------------------------------- scoring
 
 def best_class_by_category(entries: list[dict]) -> dict[str, str]:
@@ -501,25 +659,35 @@ def _verdict_ok(verdict: str, plan: dict, res: dict) -> bool:
 
 # --------------------------------------------------------------------------- per-fixture driver
 
-def eval_one(fixture: str, plan: dict, keep: bool) -> dict:
+def eval_one(fixture: str, plan: dict, keep: bool, mode: str = "guided") -> dict:
     answer = rglib.load_data(FIXTURES / fixture / "answer-key.yaml", {}) or {}
     base_url = f"http://127.0.0.1:{plan['port']}"
     if plan.get("wont_start"):
-        return eval_honesty_wont_start(fixture, plan, answer)
+        res = eval_honesty_wont_start(fixture, plan, answer)
+        res["mode"] = mode
+        return res
 
     proc, err = boot(plan["boot"], plan["port"])
     if not proc:
-        return {"fixture": fixture, "error": f"did not boot: {err[:200]}"}
+        return {"fixture": fixture, "error": f"did not boot: {err[:200]}", "mode": mode}
     project = scratch_project(fixture, base_url, bool(plan.get("web")))
     try:
         entries = run_static(project, plan)
-        dynamic = run_dynamic(project, plan, base_url)
+        if mode == "discovery":
+            # the skill recovers the surface from the code; the only per-target inputs
+            # are the seeded credentials (a seeded test DB is allowed by SKILL principle 3).
+            routes = extract_routes.extract(project)["routes"]
+            seeded = plan.get("users", [])
+            dynamic = run_dynamic_discovery(project, {"web": plan.get("web")}, base_url, routes, seeded)
+        else:
+            dynamic = run_dynamic(project, plan, base_url)
         entries += dynamic
         entries += run_privacy(project, plan, dynamic)
         rglib.dump_data(rglib.state_dir(project) / "findings.json", {"entries": entries})
         code, rep = report_build.build(project, mode="full", write_history=False)
         verdict = rep["verdict"]["verdict"]
         score = score_fixture(fixture, entries, verdict, plan, answer)
+        score["mode"] = mode
         score["lint_ok"] = code == 0
         score["n_findings"] = sum(1 for e in entries if e.get("kind") == "finding" and e.get("status") != "false-positive")
         return score
@@ -579,8 +747,8 @@ def eval_no_tools() -> dict:
 
 # --------------------------------------------------------------------------- table
 
-def print_table(results: list[dict]):
-    print("\n=== release-gate eval scores ===")
+def print_table(results: list[dict], label: str = ""):
+    print(f"\n=== release-gate eval scores {label} ===")
     for r in results:
         if r.get("error"):
             print(f"  {r['fixture']:24} ERROR: {r['error']}")
@@ -600,39 +768,69 @@ def print_table(results: list[dict]):
     print()
 
 
+def _run_mode(mode: str, names: list[str], plans: dict, keep: bool, only: list | None) -> list[dict]:
+    results = []
+    for name in names:
+        if name not in plans:
+            print(f"unknown fixture: {name}", file=sys.stderr)
+            continue
+        print(f"[eval:{mode}] {name} ...", file=sys.stderr)
+        try:
+            results.append(eval_one(name, plans[name], keep, mode=mode))
+        except Exception as e:  # keep going; an eval crash is a real (reported) result
+            results.append({"fixture": name, "error": f"{type(e).__name__}: {e}", "mode": mode})
+        stop_all()
+    if not only or "honesty-no-tools" in (only or []):
+        nt = eval_no_tools()
+        nt["mode"] = mode
+        results.append(nt)
+    return results
+
+
+def _bad(results: list[dict]) -> list[dict]:
+    """Headline guarantees. IDOR-EXPLOITED is required only in guided mode; in
+    discovery mode a surface-only miss (e.g. no collection endpoint) is allowed,
+    but vuln fixtures must still BLOCK and honesty fixtures must never pass."""
+    bad = []
+    for r in results:
+        if r.get("kind") == "vuln":
+            if not r.get("verdict_ok"):
+                bad.append(r)
+            elif r.get("mode") != "discovery" and r.get("idor_exploited") is False:
+                bad.append(r)
+        if r.get("kind") == "honesty" and not r.get("no_pass"):
+            bad.append(r)
+    return bad
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--only", action="append", help="run only these fixtures (repeatable)")
     ap.add_argument("--keep", action="store_true", help="keep scratch projects for inspection")
+    ap.add_argument("--mode", choices=["guided", "discovery", "both"], default="guided",
+                    help="guided = hand-fed bug locations; discovery = plan from recovered surface")
     ap.add_argument("--out", type=Path, default=REPO / "evals" / "last-scores.json")
     args = ap.parse_args(argv)
 
     plans = _plan()
     names = args.only or list(plans)
+    modes = ["guided", "discovery"] if args.mode == "both" else [args.mode]
     stop_all()
-    results = []
+    all_results: dict[str, list[dict]] = {}
     try:
-        for name in names:
-            if name not in plans:
-                print(f"unknown fixture: {name}", file=sys.stderr)
-                continue
-            print(f"[eval] {name} ...", file=sys.stderr)
-            try:
-                results.append(eval_one(name, plans[name], args.keep))
-            except Exception as e:  # keep going; an eval crash is a real (reported) result
-                results.append({"fixture": name, "error": f"{type(e).__name__}: {e}"})
+        for mode in modes:
+            all_results[mode] = _run_mode(mode, names, plans, args.keep, args.only)
             stop_all()
-        if not args.only or "honesty-no-tools" in (args.only or []):
-            results.append(eval_no_tools())
     finally:
         stop_all()
-    print_table(results)
-    args.out.write_text(json.dumps(results, indent=2) + "\n")
+
+    flat = []
+    for mode in modes:
+        print_table(all_results[mode], f"[{mode}]")
+        flat += all_results[mode]
+    args.out.write_text(json.dumps(flat, indent=2) + "\n")
     print(f"scores written to {args.out}")
-    # exit non-zero if a headline guarantee failed
-    bad = [r for r in results if r.get("kind") == "vuln" and (not r.get("verdict_ok") or r.get("idor_exploited") is False)]
-    bad += [r for r in results if r.get("kind") == "honesty" and not r.get("no_pass")]
-    return 1 if bad else 0
+    return 1 if _bad(flat) else 0
 
 
 if __name__ == "__main__":

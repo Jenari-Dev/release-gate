@@ -1,0 +1,284 @@
+# release-gate: quick-mode pre-merge gate for pull requests.
+#
+# Copy this file to .github/workflows/release-gate.yml in YOUR repository, then
+# fill in the two placeholders under `env:` below (RELEASE_GATE_REPO and
+# RELEASE_GATE_REF). Nothing else needs configuring and no secrets are used.
+#
+# What it does: gitleaks (secrets in git history), osv-scanner (known-vulnerable
+# dependencies) and semgrep (SAST with the VENDORED, commit-pinned rule snapshot,
+# never the registry), then `report_build.py --mode quick`. The job FAILS when the
+# verdict is BLOCK. It runs no dynamic tests: nothing here starts your app or sends
+# traffic anywhere except the dependency lookup disclosed below.
+#
+# Honesty notes:
+#   * Quick mode never produces SHIP. The best a quick run can say is
+#     "SHIP WITH ACCEPTED RISKS", because the full gate has phases this run skips.
+#     Treat this job as a tripwire for new secrets, new known-vulnerable
+#     dependencies and new SAST hits, not as a release decision.
+#   * A tool that is missing or fails is recorded as NOT-TESTED, never as a pass.
+#   * Scanner network use: osv-scanner sends package NAMES AND VERSIONS (not your
+#     source) to the OSV vulnerability database. See the osv-scanner step for how
+#     to run it offline.
+#
+# Recommended branch protection (repository Settings -> Branches -> rule):
+#   * Require status checks to pass before merging; add "release-gate / gate".
+#   * Require branches to be up to date before merging.
+#   * Do not allow bypassing the rule (no admin bypass, no "allow specified
+#     actors to bypass"). A gate that admins can skip is a suggestion.
+#   * Require review for changes under .github/workflows/ (CODEOWNERS), so the
+#     gate cannot be weakened by the same PR it is gating.
+#
+# Every `uses:` below is pinned to a full commit SHA with the tag in a comment.
+# Re-verify a pin before bumping it:  git ls-remote --tags <repo-url> <tag>
+# (for annotated tags use the line ending in ^{}).
+
+name: release-gate
+
+on:
+  # Deliberately `pull_request`, NOT `pull_request_target`: the latter runs with
+  # write access and secrets against code from forks.
+  pull_request:
+
+# Least privilege for every job by default. A job that needs more declares it
+# itself (see upload-sarif below).
+permissions:
+  contents: read
+
+concurrency:
+  group: release-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Where the release-gate plugin comes from and WHICH COMMIT of it to run.
+  # Replace both. RELEASE_GATE_REF must be a full 40-character commit SHA that you
+  # have reviewed; a branch or tag name is rejected on purpose, because a moving
+  # ref means the code that gates your merges can change without a review.
+  RELEASE_GATE_REPO: "RELEASE_GATE_REPO"   # e.g. the https clone URL of your release-gate checkout
+  RELEASE_GATE_REF: "RELEASE_GATE_REF"     # full commit SHA
+  # Pinned bootstrap versions. uv builds the Python environment; PyYAML and
+  # jsonschema are the only Python dependencies the plugin scripts need.
+  UV_VERSION: "0.12.21"
+  PYYAML_VERSION: "6.0.3"
+  JSONSCHEMA_VERSION: "4.26.0"
+  # Never let a scanner phone home with usage data.
+  SEMGREP_SEND_METRICS: "off"
+  SEMGREP_ENABLE_VERSION_CHECK: "0"
+
+jobs:
+  gate:
+    name: gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read          # checkout only; this job cannot write to the repo
+    steps:
+      - name: Check out the pull request
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        with:
+          fetch-depth: 0              # gitleaks scans full history, not just the tip
+          persist-credentials: false  # the token is not left in .git/config for later steps
+
+      - name: Fetch the pinned release-gate plugin
+        # Cloned from RELEASE_GATE_REPO at exactly RELEASE_GATE_REF. The script
+        # refuses placeholders and branch names, then checks the commit it got.
+        run: |
+          set -euo pipefail
+          if ! printf '%s' "$RELEASE_GATE_REF" | grep -Eq '^[0-9a-f]{40}$'; then
+            echo "::error::RELEASE_GATE_REF must be a full 40-hex commit SHA (edit the env block of this workflow)."
+            exit 1
+          fi
+          case "$RELEASE_GATE_REPO" in
+            https://*) ;;
+            *) echo "::error::RELEASE_GATE_REPO must be an https:// clone URL (edit the env block of this workflow)."; exit 1 ;;
+          esac
+          RG_DIR="$RUNNER_TEMP/release-gate"
+          git init --quiet "$RG_DIR"
+          git -C "$RG_DIR" fetch --quiet --depth 1 "$RELEASE_GATE_REPO" "$RELEASE_GATE_REF"
+          git -C "$RG_DIR" checkout --quiet FETCH_HEAD
+          GOT="$(git -C "$RG_DIR" rev-parse HEAD)"
+          if [ "$GOT" != "$RELEASE_GATE_REF" ]; then
+            echo "::error::fetched commit $GOT does not match RELEASE_GATE_REF"
+            exit 1
+          fi
+          echo "RG_SKILL=$RG_DIR/skills/release-gate" >> "$GITHUB_ENV"
+
+      - name: Bootstrap Python environment (pinned)
+        # The runner image ships Python 3. uv comes from PyPI at an exact version;
+        # the plugin's two Python dependencies are exact pins as well.
+        run: |
+          set -euo pipefail
+          python3 -m pip install --quiet --user "uv==${UV_VERSION}"
+          export PATH="$HOME/.local/bin:$PATH"
+          uv venv --quiet --python 3.12 "$RUNNER_TEMP/rgenv"
+          uv pip install --quiet --python "$RUNNER_TEMP/rgenv/bin/python" \
+            "pyyaml==${PYYAML_VERSION}" "jsonschema==${JSONSCHEMA_VERSION}"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          echo "RG_PY=$RUNNER_TEMP/rgenv/bin/python" >> "$GITHUB_ENV"
+
+      - name: Install pinned scanners (checksum-verified)
+        # install_tools.py reads tools.lock.yaml: exact versions, SHA-256 checked
+        # BEFORE extraction, semgrep rules verified by commit. No third-party
+        # installer actions and no `curl | bash`.
+        run: |
+          "$RG_PY" "$RG_SKILL/scripts/install_tools.py" \
+            --tool gitleaks --tool osv-scanner --tool semgrep --tool semgrep-rules
+
+      - name: Secrets in git history (gitleaks)
+        # Exit code 4 = tool not run, 6 = timeout, 7 = error. We keep going so the
+        # report can say NOT-TESTED; a scanner finding issues is not a failure here.
+        run: |
+          "$RG_PY" "$RG_SKILL/scripts/run_tool.py" --project "$GITHUB_WORKSPACE" \
+            --tool gitleaks --test-type scan -- \
+            git {project} --report-format json --report-path {evidence}/gitleaks.json --no-banner \
+            || echo "::warning::gitleaks did not complete (recorded as NOT-TESTED)"
+
+      - name: Known-vulnerable dependencies (osv-scanner)
+        # NETWORK: sends dependency names and versions (not source code) to the
+        # OSV database. To run offline instead, pre-fetch the databases once and
+        # replace the args with:
+        #   scan source -r --offline-vulnerabilities --format json --output-file {evidence}/osv-scanner.json {project}
+        # (first run: add --download-offline-databases). Without a DB the result
+        # is NOT-TESTED, never a pass.
+        run: |
+          "$RG_PY" "$RG_SKILL/scripts/run_tool.py" --project "$GITHUB_WORKSPACE" \
+            --tool osv-scanner --test-type scan -- \
+            scan source -r --format json --output-file {evidence}/osv-scanner.json {project} \
+            || echo "::warning::osv-scanner did not complete (recorded as NOT-TESTED)"
+
+      - name: SAST (semgrep, vendored rules, telemetry off)
+        # Rules come from the commit-pinned snapshot installed above, never from
+        # the Semgrep registry (no p/... and no --config auto). --metrics off and
+        # --jobs 1 are required. Rule directories that do not exist are skipped.
+        run: |
+          set -uo pipefail
+          RULES="$HOME/.local/share/release-gate/semgrep-rules"
+          CONFIGS=()
+          for d in python/lang/security python/django/security python/flask/security python/fastapi/security \
+                   javascript/lang/security javascript/express javascript/react \
+                   typescript/lang/security go/lang/security java/lang/security ruby/lang/security \
+                   php/lang/security csharp/lang/security dockerfile/security generic/secrets; do
+            [ -d "$RULES/$d" ] && CONFIGS+=(--config "$RULES/$d")
+          done
+          if [ "${#CONFIGS[@]}" -eq 0 ]; then
+            echo "::warning::no vendored semgrep rule directories found (recorded as NOT-TESTED)"
+            exit 0
+          fi
+          "$RG_PY" "$RG_SKILL/scripts/run_tool.py" --project "$GITHUB_WORKSPACE" \
+            --tool semgrep --test-type scan -- \
+            scan --metrics off --jobs 1 --json --output {evidence}/semgrep.json "${CONFIGS[@]}" {project} \
+            || echo "::warning::semgrep did not complete (recorded as NOT-TESTED)"
+
+      - name: Normalize results
+        # A missing or unparseable tool output becomes a NOT-TESTED entry, never
+        # "zero findings".
+        run: |
+          set -euo pipefail
+          OUT="$GITHUB_WORKSPACE/.release-gate/findings.json"
+          for spec in gitleaks:gitleaks osv-scanner:osv-scanner semgrep:semgrep; do
+            tool="${spec%%:*}"; file="${spec##*:}"
+            latest="$(ls -1d "$GITHUB_WORKSPACE/.release-gate/evidence/${tool}-"* 2>/dev/null | tail -n 1 || true)"
+            "$RG_PY" "$RG_SKILL/scripts/normalize_findings.py" --tool "$tool" \
+              --input "${latest:-$GITHUB_WORKSPACE/.release-gate/evidence/${tool}-missing}/${file}.json" \
+              --out "$OUT" --scope-note "CI quick run on pull request"
+          done
+          "$RG_PY" "$RG_SKILL/scripts/dedupe_findings.py" --in "$OUT" --out "$OUT" --root "$GITHUB_WORKSPACE"
+
+      - name: Build the quick-mode report
+        id: report
+        # report_build.py runs the report lint. Exit 2 means the lint failed and
+        # the report was written as *.lint-failed.*; that fails the job below.
+        # Only the redacted reports are copied to rg-out/; raw scanner output in
+        # .release-gate/evidence/ can contain secrets and is never uploaded.
+        run: |
+          set -uo pipefail
+          DATE="$(date -u +%F)"
+          mkdir -p rg-out
+          "$RG_PY" "$RG_SKILL/scripts/report_build.py" --project "$GITHUB_WORKSPACE" \
+            --mode quick --date "$DATE" --no-history
+          code=$?
+          echo "$code" > rg-out/report-exit-code.txt
+          R=".release-gate/reports/release-gate-${DATE}"
+          if [ "$code" -eq 0 ]; then
+            for ext in md html json sarif; do cp "${R}.${ext}" "rg-out/release-gate.${ext}"; done
+          fi
+          exit 0
+
+      - name: Publish verdict to the job summary
+        if: always()
+        # Reads only the generated JSON. Untrusted text (finding titles) is never
+        # interpolated into a workflow expression or a shell command.
+        run: |
+          "$RG_PY" - <<'PY'
+          import json, os, pathlib
+          p = pathlib.Path("rg-out/release-gate.json")
+          lines = ["## release-gate (quick mode)", ""]
+          if p.exists():
+              v = json.loads(p.read_text(encoding="utf-8"))["verdict"]
+              lines.append(f"Verdict: **{v['verdict']}**")
+              lines += [""] + [f"- {r}" for r in v["reasons"][:20]]
+          else:
+              lines.append("No report was produced (report lint failed or the build errored).")
+          lines += ["", "Quick mode runs three static scanners only; it is not a release decision.",
+                    "Not legal advice and not a penetration test. See DISCLAIMER.md in the release-gate repository."]
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as fh:
+              fh.write("\n".join(lines) + "\n")
+          PY
+
+      - name: Upload report artifact
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+        with:
+          name: release-gate-report
+          path: rg-out/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Fail the job on BLOCK
+        # The merge gate itself. BLOCK, a lint failure, or a missing report all
+        # fail closed.
+        run: |
+          "$RG_PY" - <<'PY'
+          import json, pathlib, sys
+          code_file = pathlib.Path("rg-out/report-exit-code.txt")
+          report = pathlib.Path("rg-out/release-gate.json")
+          if not code_file.exists() or code_file.read_text().strip() != "0" or not report.exists():
+              print("::error::release-gate report was not produced cleanly (lint failure or build error); failing closed.")
+              sys.exit(1)
+          verdict = json.loads(report.read_text(encoding="utf-8"))["verdict"]["verdict"]
+          print(f"verdict: {verdict}")
+          if verdict == "BLOCK":
+              print("::error::release-gate verdict is BLOCK. See the job summary and the release-gate-report artifact.")
+              sys.exit(1)
+          PY
+
+  upload-sarif:
+    # Separate job so that security-events: write is never granted to the job that
+    # runs scanners. Skipped for pull requests from forks: GitHub gives those a
+    # read-only token, so the upload could not succeed.
+    name: upload-sarif
+    needs: gate
+    if: ${{ always() && needs.gate.result != 'skipped' && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Download report artifact
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0
+        with:
+          name: release-gate-report
+          path: rg-out/
+
+      - name: Upload SARIF to code scanning
+        # Pinned to the full commit SHA of github/codeql-action/upload-sarif v3.38.2
+        # (annotated tag v3.38.2 -> commit 1190a975..., checked 2026-10-18).
+        # Re-verify before bumping:
+        #   git ls-remote --tags https://github.com/github/codeql-action 'v3.38.2^{}'
+        # Code scanning must be available for the repository (public, or private
+        # with GitHub Advanced Security); otherwise this step fails and only this
+        # job turns red. Do not make this job a required status check.
+        uses: github/codeql-action/upload-sarif@1190a975f95ce23525efb6a3fc21ea29567c1b52  # v3.38.2
+        with:
+          sarif_file: rg-out/release-gate.sarif
+          category: release-gate

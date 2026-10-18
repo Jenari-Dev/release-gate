@@ -83,12 +83,25 @@ def http(method: str, url: str, *, headers: dict | None = None, data: bytes | No
         return Resp(0, f"<transport error: {type(e).__name__}: {e}>")
 
 
+def _dig(obj: Any, dotted: str) -> Any:
+    """Follow a dotted token_field path (e.g. 'data.token') into a JSON object."""
+    cur = obj
+    for part in dotted.split("."):
+        if isinstance(cur, dict) and part in cur:
+            cur = cur[part]
+        else:
+            return None
+    return cur
+
+
 def login(base_url: str, spec: dict, user: dict) -> str | None:
     lg = spec.get("login") or {}
     if not lg:
         return None
     url = base_url.rstrip("/") + lg.get("path", "/login")
-    payload = {"username": user["username"], "password": user["password"]}
+    user_field = lg.get("username_field", "username")
+    pass_field = lg.get("password_field", "password")
+    payload = {user_field: user["username"], pass_field: user["password"]}
     if lg.get("encoding", "form") == "json":
         resp = http(lg.get("method", "POST"), url, data=json.dumps(payload).encode(),
                     content_type="application/json")
@@ -98,9 +111,11 @@ def login(base_url: str, spec: dict, user: dict) -> str | None:
     if resp.status // 100 != 2:
         return None
     try:
-        return json.loads(resp.body).get(lg.get("token_field", "token"))
-    except (json.JSONDecodeError, AttributeError):
+        obj = json.loads(resp.body)
+    except (json.JSONDecodeError, TypeError):
         return None
+    val = _dig(obj, lg.get("token_field", "token")) if isinstance(obj, dict) else None
+    return val if isinstance(val, str) else None
 
 
 def auth_headers(spec: dict, token: str | None) -> dict:
@@ -141,6 +156,9 @@ def run_matrix(spec: dict, scope: dict | None, state: Path) -> list[dict]:
 
     exploited: list[dict] = []
     denials: list[str] = []
+    positives: list[str] = []
+    pos_ok = 0
+    pos_attempted = 0
     n_probes = 0
     for res in spec.get("resources", []):
         method, path_tmpl = parse_endpoint(res["endpoint"])
@@ -151,6 +169,16 @@ def run_matrix(spec: dict, scope: dict | None, state: Path) -> list[dict]:
             for rid in ids:
                 path = path_tmpl.replace("{id}", str(rid))
                 url = base + (path if path.startswith("/") else "/" + path)
+                # positive control: the owner must be able to read their OWN resource.
+                # If they can't, the matrix never authenticated anyone, so a wall of
+                # cross-user 401s is NOT a verified absence of IDOR — it is an untested
+                # endpoint. This stops a silent login failure from faking a pass.
+                if owner != ANON and owner in tokens:
+                    pos_attempted += 1
+                    pr = http(method, url, headers=auth_headers(spec, tokens[owner]))
+                    positives.append(f"{method} {url}  as OWNER {owner}  -> HTTP {pr.status}")
+                    if pr.status // 100 == 2:
+                        pos_ok += 1
                 for principal, token in tokens.items():
                     if principal == owner:
                         continue  # the owner is allowed; we test everyone else
@@ -192,9 +220,6 @@ def run_matrix(spec: dict, scope: dict | None, state: Path) -> list[dict]:
     if exploited:
         return exploited
 
-    ev = _save_evidence(state, "denied_cross_user_requests.txt",
-                        [f"# authorization matrix: {n_probes} cross-principal probes, all denied", ""] + denials) \
-        if denials else None
     if n_probes == 0:
         return [{
             "id": "RG-AUTHZ-001", "kind": "check", "check_id": "SEC-AUTHZ-MATRIX",
@@ -202,12 +227,31 @@ def run_matrix(spec: dict, scope: dict | None, state: Path) -> list[dict]:
             "evidence_class": "NOT-TESTED",
             "not_tested_reason": "no owned resources to probe in the authz spec", "evidence": [],
         }]
+    # Positive control failed: no owner could read even their own resource, so the
+    # matrix never had a working authenticated session. Report NOT-TESTED, not a pass.
+    if pos_attempted and pos_ok == 0:
+        ev = _save_evidence(state, "authz_positive_control_failed.txt",
+                            ["# positive control: every owner failed to read their OWN resource",
+                             "# the authorization matrix could not authenticate; cross-user denials are not conclusive",
+                             ""] + positives + ["", "--- cross-principal probes ---"] + denials)
+        return [{
+            "id": "RG-AUTHZ-001", "kind": "check", "check_id": "SEC-AUTHZ-MATRIX",
+            "title": "Authorization matrix", "category": "authz", "phase": 3,
+            "evidence_class": "NOT-TESTED",
+            "not_tested_reason": ("positive control failed: no owner could read their own resource, so login/token "
+                                  "likely did not work; cross-user denials are not a verified absence of IDOR"),
+            "evidence": [{"type": "request-response", "path": ev}],
+        }]
+    ev = _save_evidence(state, "denied_cross_user_requests.txt",
+                        [f"# authorization matrix: {n_probes} cross-principal probes, all denied",
+                         f"# positive control: {pos_ok}/{pos_attempted} owners could read their own resource", ""]
+                        + positives + ["", "--- cross-principal denials ---"] + denials)
     return [{
         "id": "RG-AUTHZ-001", "kind": "check", "check_id": "SEC-AUTHZ-MATRIX",
         "title": "Authorization matrix: every cross-user resource request denied",
         "category": "authz", "phase": 3, "evidence_class": "VERIFIED-ABSENT",
         "evidence": [{"type": "request-response", "path": ev,
-                      "description": f"{n_probes} cross-principal probes, all denied"}],
+                      "description": f"{n_probes} cross-principal probes denied; positive control {pos_ok}/{pos_attempted} ok"}],
         "adversarial": {"required": True, "outcome": "not-run"},
         "created_at": rglib.now_iso(),
     }]
