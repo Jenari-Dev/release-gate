@@ -141,3 +141,15 @@ def test_table_output(lock_env):
     lock, _ = lock_env
     out = ct.format_table(ct.check_all(lock))
     assert "rgfake-ok" in out and "docker: unavailable" in out
+
+
+def test_resolve_tool_finds_payload_exe_under_share_dir(tmp_path, monkeypatch):
+    import check_tools
+    monkeypatch.setenv("PATH", "/nonexistent")
+    exe = tmp_path / "zap" / "ZAP_9.9.9" / "zap.sh"
+    exe.parent.mkdir(parents=True)
+    exe.write_text("#!/bin/sh\n")
+    exe.chmod(0o755)
+    lock = {"share_dir": str(tmp_path), "install_dir": str(tmp_path / "bin"),
+            "tools": {"zap": {"kind": "archive-dir", "exe_rel": "zap/ZAP_9.9.9/zap.sh"}}}
+    assert check_tools.resolve_tool("zap", lock) == exe

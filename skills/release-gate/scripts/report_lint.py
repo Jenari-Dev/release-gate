@@ -9,6 +9,9 @@ Fails (exit 1) on:
   - an entry without a valid evidence class, or NOT-TESTED without a reason
   - an unredacted secret anywhere in the report
   - external assets or scripts in the HTML report (it must be self-contained)
+  - host identity in a report (this machine's hostname, the user's home path), or
+    pre-existing host-file content in evidence (passwd lines, private keys, the
+    hostname): proofs may only read canaries the skill planted (phase 03)
 
 Usage: report_lint.py REPORT [REPORT ...] [--state-dir .release-gate]
 File type is taken from the extension (.md, .html, .json, .sarif).
@@ -18,7 +21,9 @@ from __future__ import annotations
 import argparse
 import html
 import json
+import os
 import re
+import socket
 import sys
 from pathlib import Path
 
@@ -39,6 +44,61 @@ CODE_SPAN = re.compile(r"`[^`]*`")
 MD_LINK = re.compile(r"\]\(([^)\s]+)\)")
 EVIDENCE_LINK = re.compile(r"\]\((?:\.\./)?evidence/[^)\s]+\)")
 CLASS_RE = re.compile(r"\b(EXPLOITED|TOOL-CONFIRMED|VERIFIED-ABSENT)\b")
+
+
+# content that only appears when a proof read a real host file instead of a planted canary
+HOST_FILE_MARKERS = [
+    ("/etc/passwd line", re.compile(r"\broot:[x*]?:0:0:")),
+]  # private keys / credential files are not listed: a scanned project may legitimately contain them,
+#   and secret findings are already redacted by lint_secrets
+EVIDENCE_SCAN_MAX = 2_000_000
+
+
+def host_identity() -> dict[str, str]:
+    """This machine's identifying strings. Hostnames shorter than 4 characters or
+    'localhost' are skipped (too many accidental matches)."""
+    out = {}
+    host = socket.gethostname().split(".")[0]
+    if len(host) >= 4 and host.lower() != "localhost":
+        out["hostname"] = host
+    home = os.path.expanduser("~")
+    if home not in ("", "/", "~"):
+        out["home path"] = home
+    return out
+
+
+def lint_host_identity(name: str, text: str, ident: dict[str, str] | None = None, evidence: bool = False) -> list[str]:
+    """Reports must not carry this machine's hostname or home path. Evidence may
+    contain project paths (often under home), so for evidence only the hostname and
+    host-file markers count."""
+    ident = host_identity() if ident is None else ident
+    problems = []
+    for kind, val in ident.items():
+        if evidence and kind == "home path":
+            continue
+        pat = re.compile(re.escape(val) if kind == "home path" else rf"(?<![\w.-]){re.escape(val)}(?![\w-])")
+        if pat.search(text):
+            problems.append(f"{name}: contains this machine's {kind}; a proof read host data instead of a planted canary")
+    if evidence:
+        problems += [f"{name}: contains {kind} content; proofs may only read a canary the skill planted"
+                     for kind, pat in HOST_FILE_MARKERS if pat.search(text)]
+    return problems
+
+
+def lint_evidence(state_dir: Path, ident: dict[str, str] | None = None) -> list[str]:
+    problems = []
+    ev = state_dir / "evidence"
+    if not ev.is_dir():
+        return problems
+    for f in sorted(ev.rglob("*")):
+        if not f.is_file() or f.stat().st_size > EVIDENCE_SCAN_MAX:
+            continue
+        try:
+            text = f.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        problems += lint_host_identity(f"evidence/{f.relative_to(ev)}", text, ident, evidence=True)
+    return problems
 
 
 def _banned_hits(line: str) -> list[str]:
@@ -133,8 +193,10 @@ def lint_json(path: Path, state_dir: Path | None) -> list[str]:
 
 def lint_paths(paths: list[Path], state_dir: Path | None = None) -> list[str]:
     problems: list[str] = []
+    ident = host_identity()
     for p in paths:
         p = Path(p)
+        problems += lint_host_identity(p.name, p.read_text(encoding="utf-8", errors="replace"), ident)
         if p.suffix == ".md":
             problems += lint_markdown(p)
         elif p.suffix == ".html":
@@ -143,6 +205,8 @@ def lint_paths(paths: list[Path], state_dir: Path | None = None) -> list[str]:
             problems += lint_json(p, state_dir)
         else:  # .sarif and anything else: secrets only
             problems += lint_secrets(p.name, p.read_text(encoding="utf-8"))
+    if state_dir is not None:
+        problems += lint_evidence(Path(state_dir), ident)
     return problems
 
 

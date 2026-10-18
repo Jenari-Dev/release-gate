@@ -508,8 +508,9 @@ def run_dynamic_discovery(project: Path, plan: dict, base_url: str, routes: list
                 if e.get("evidence_class") == "EXPLOITED":
                     e["evidence_class"] = "SUSPECTED"
                     e["severity"] = "high"
-                    e["note"] = ("cross-principal access observed but resource ownership could not be "
-                                 "confirmed (no collection endpoint to learn owned ids); needs a manual owner check")
+                    e["verification"] = {"verdict": "unverified", "reason": (
+                        "cross-principal access observed but resource ownership could not be "
+                        "confirmed (no collection endpoint to learn owned ids); needs a manual owner check")}
                     e.pop("adversarial", None)
         entries += authz
     else:

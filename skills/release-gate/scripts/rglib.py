@@ -197,6 +197,8 @@ def check_scope(url: str, test_type: str, scope: dict | None) -> tuple[bool, str
     if not scope or not scope.get("targets"):
         return False, "no confirmed scope (.release-gate/scope.yaml missing or empty)"
     scheme, host, port = _origin(url)
+    if scheme not in ("http", "https", "ws", "wss"):
+        return False, f"unsupported URL scheme {scheme!r} (only http/https/ws/wss targets are testable)"
     excluded = {h.lower() for h in scope.get("excluded_hosts", [])}
     if host in excluded:
         return False, f"{host} is an excluded third-party host"

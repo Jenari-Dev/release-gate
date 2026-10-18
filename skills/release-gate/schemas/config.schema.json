@@ -185,11 +185,12 @@
     },
     "answers_source": {
       "type": "object",
-      "description": "Per-key: 'user' (asked) or 'code' (inferred from code and confirmed by user)",
+      "description": "Per-key: 'user' (asked), 'code' (inferred from code and confirmed by user), or 'assumed' (non-interactive run: conservative default, unconfirmed)",
       "additionalProperties": {
         "enum": [
           "user",
-          "code"
+          "code",
+     "assumed"
         ]
       }
     },

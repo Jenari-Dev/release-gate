@@ -19,7 +19,7 @@ Conventions: `<skill>` = the skill directory, `<project>` = the project under te
    python <skill>/scripts/check_tools.py --json
    ```
    Tools live under `~/.local/share/release-gate` (`bin/` executables, share root for payloads such as `semgrep-rules`, `nuclei-templates`, `zap`, `node`). Status `ok` | `version-mismatch` | `missing` | `broken`. Anything not `ok` carries a ready-made `not_tested_reason`: keep it verbatim for the affected check. Offer `install_tools.py --all` (checksum-verified, no sudo); install only if the user agrees. Never install from anywhere else.
-5. **Ask the intake questions** (only what code cannot answer; infer the rest from step 3 and ask the user to confirm). Record each answer's origin in `answers_source` (`user` or `code`):
+5. **Ask the intake questions** (only what code cannot answer; infer the rest from step 3 and ask the user to confirm). Record each answer's origin in `answers_source` (`user`, `code`, or `assumed` when the run is non-interactive and you took the conservative default):
    - `product`: `name`, `distribution[]` (website, saas, api, desktop-app, mobile-app, game, game-mod, browser-extension, self-hosted, library, cli), `pricing`, `license`; for mods `modded_product` and `modded_product_eula_read`.
    - `operator`: `legal_entity`, `entity_jurisdiction`, `operator_residence`, `contact_email` (used only in generated docs, never sent anywhere).
    - `audience`: `regions[]`, `under_13_possible`, `under_16_possible`, `directed_at_children`.

@@ -131,3 +131,48 @@ Clean twins land **SHIP WITH ACCEPTED RISKS**, not bare SHIP, and the scorer cou
 2. Discovery's FastAPI IDOR is SUSPECTED because there is no collection endpoint to establish ownership; a message-create endpoint or an OpenAPI ownership hint would let it reach EXPLOITED. Left honest rather than special-cased.
 3. ZAP/nuclei are installed and documented in phase 03 but still not exercised by the eval harness (SEC-DAST non-critical; ZAP startup too heavy to add cheaply). Wire a smoke run in session 4 if cheap.
 4. Discovery does not yet auto-identify a stored-XSS sink pair, a credential-log location, or a creatable single-use token; these are the main discovery gaps and candidates for session-4 heuristics.
+
+## Session 4 — 2026-10-18 — end-to-end agent eval, polish (final)
+
+### Built
+- **End-to-end agent eval** `evals/run_agent_eval.py` (opt-in `--agent`; `--rescore` re-scores saved runs with no model calls). Per fixture: scrubbed scratch copy (no `answer-key.yaml`, README replaced by a neutral one giving only start command, URL and seeded accounts; fixture names and "planted"/"FIXTURE NOTE" comments removed), plugin copied without `evals/`, `tests/` or `docs/`, app booted on loopback from the copy, then `claude -p` with the plugin, one fixed prompt, no MCP servers, no user settings/CLAUDE.md/memory (`--setting-sources project,local`), WebFetch/WebSearch denied, `--permission-mode dontAsk`. The answer key is read only after the agent exits. The agent's final report entries (findings.json plus any `report_build.py --findings` files it merged) are scored with the same `score_fixture` as the other modes, and the verdict is recomputed by `report_build`. Honesty controls: missing/unauthenticated `claude` or a failed run → `NOT-TESTED`, never a score; a contamination audit over every tool call (answer key, eval fixtures, this repo); a list of non-loopback hosts named in tool calls; subagent calls and adversarial outcomes counted; a content digest of the plugin the agent saw. 14 tests (`tests/test_agent_eval.py`).
+- `scripts/render_report.py` renders `templates/report/report.html.tmpl` (escaped, enum-guarded class slots, unfilled-slot check, linted). Sample in `docs/sample-report/`, visually checked (CSP `default-src 'none'`, no scripts or external requests, light/dark, evidence badges, no overflow at 375 px).
+- `docs/SELF-AUDIT.md`: release-gate's static phase run on itself (quick-mode verdict SHIP WITH ACCEPTED RISKS, two low waivers).
+- SKILL.md finalized: status banner "complete — v1", a prominent "report NOT-TESTED, never improvise" rule, a run-modes table, a non-interactive-run rule (`answers_source: assumed`, new schema value), every referenced script/reference verified to exist.
+
+### Fixed because the end-to-end eval exposed it (skill safety, not scores)
+1. **Read-proofs may only touch planted canaries.** Run 1's FastAPI agent proved SSRF by reading the host's `/etc/hostname` via `file://`. On a real machine the same move could copy host secrets into evidence. SKILL principle 3 and phase 03 now say: SSRF/path-traversal/file-read proofs read only an HTTP canary listener the skill started or a random-token canary file it created; never pre-existing host files or metadata endpoints, even on localhost. `report_lint.py` now fails a run whose reports carry this machine's hostname or home path, or whose evidence carries the hostname or a passwd line. Run 2's FastAPI agent followed the rule (its `file://` proof read only its planted canary file) and its evidence passes the new lint. Run-1 artifacts were never copied into the repo.
+2. **nuclei contacted a third party.** Run 1's clean-FastAPI agent ran nuclei without `-ni`, so nuclei began registering with the public Interactsh server (oast.me). The agent noticed, killed it and recorded it. `run_tool.py` now always adds `-ni` and `-duc` to nuclei (recorded as `forced_flags`), and phase 03 documents why.
+3. **Public wildcard DNS in SSRF bypass probes.** Run 1 used `*.nip.io` for an allowlist bypass, which leaks a DNS lookup to a third party. Phase 03 now limits bypass probes to names that resolve without a third party.
+4. **ZAP never resolved through `run_tool.py`** ("tool unavailable: zap") although installed: `check_tools.resolve_tool` ignored `exe_rel` under `share_dir`. Fixed with a test.
+5. Self-audit fixes: `rglib.check_scope` accepted `file://`/`ftp://` URLs to an in-scope host:port (now http/https/ws/wss only); `install_tools.py` now refuses an absolute or `..` `install_root` before `rmtree`; checkov's 0-resources empty pass documented in phase 02.
+6. Session-3 bug: the discovery-mode FastAPI report failed its own lint (a non-schema `note` field on downgraded authz entries; `lint_ok=False` in the session-3 table). Moved into `verification.reason`.
+
+### Measured eval scores (2026-10-18)
+**Guided** and **discovery**: `run_evals.py --mode both` reproduces the session-3 tables exactly (vuln BLOCK, honesty never passes, clean twins 0 false positives).
+
+**End-to-end** (run 2; Sonnet via `claude -p`, one run per fixture, plugin digest `deadc12e3f6b7101`; the vuln-node-express retry ran on `6c16d82d72d886c4`, which adds only the ZAP-resolution fix):
+
+| Fixture | Verdict | Score |
+|---|---|---|
+| vuln-node-express | NOT-TESTED | attempt 1: a model safety classifier stopped the agent while it was writing `findings.json`; it had reproduced IDOR, SQLi, stored XSS, SSRF (own canary), coupon race, no lockout and password-in-log in its transcript, but recorded nothing, so there is no score. Retry (one, published beside it): **BLOCK, 10/10 detected, 7/10 class correct** (both planted secrets and the vulnerable lodash pin stayed SUSPECTED instead of TOOL-CONFIRMED), IDOR EXPLOITED, coupon race EXPLOITED, 5/5 adversarial upheld, evidence passes the host-identity lint |
+| vuln-python-fastapi | BLOCK | 9/10 detected, 8/10 class correct, IDOR EXPLOITED; miss: brute force filed under `authn` (the skill's own catalog category) where the key expects `rate-limit`; 8/8 adversarial checks upheld by a subagent |
+| vuln-static-trackers | BLOCK | 3/3 detected |
+| clean-node-express | SHIP WITH ACCEPTED RISKS | strict: 2 must-not categories flagged, both low (log injection EXPLOITED; DNS-rebinding window SUSPECTED), none high/critical |
+| clean-python-fastapi | SHIP WITH ACCEPTED RISKS | strict: 3 categories flagged (password spraying across usernames EXPLOITED medium; log forging EXPLOITED medium; usernames kept in logs after deletion low), none high/critical |
+| clean-static-trackers | BLOCK (wrong) | 0 false positives, but "insufficient evidence": 4 of 6 critical checks NOT-TESTED (scratch copy is not a git repo; live-secret verification not authorised; no build artifacts; authz recorded NOT-TESTED instead of not-applicable) |
+| honesty-wont-start | BLOCK | "insufficient evidence"; no runtime result invented, no DATABASE_URL guessed; the planted FAKE key was judged a false positive (0/1) |
+
+Run 1 (earlier skill, before the fixes above; 4 fixtures finished before it was stopped) is kept outside the repo; re-scored it gave vuln-python 10/10, clean twins SHIP WITH ACCEPTED RISKS with only low/medium category hits, honesty BLOCK. Not published: it predates the safety fixes.
+
+**Adversarial path (open issue #1):** exercised for real in every end-to-end run with something to verify. Each run spawned a fresh subagent; 24/24 required entries were upheld (19 in run 2 plus 5 in the retry), 0 refuted. Critical VERIFIED-ABSENT checks on the clean twins (authz matrix, injection) were upheld. No clean twin reached bare SHIP: each has open medium/low findings the agent reproduced, and live-secret verification was not authorised. Bare SHIP stays reachable only with those conditions met.
+
+**What the clean-twin "false positives" are.** The scorer counts any finding in a must-not category. The agent's hits were real weaknesses it reproduced in the hardened twins (e.g. the per-username login limiter allows password spraying), not alarms on the planted bug classes. The strict number is published as is; the high/critical count (0) is published beside it.
+
+**Harness limitations found:** the scratch copy is not a git repository, so SEC-SECRETS-HISTORY is NOT-TESTED on every end-to-end run (penalises clean verdicts; real projects are usually git repos). Category taxonomy differs between the skill (`authn` for brute force, `privacy` vs `policy-mismatch`) and some answer-key entries; scored strictly, not adjudicated. Model runs are not deterministic; one run per fixture.
+
+### Open issues carried forward
+1. End-to-end: `git init` the scratch copy so history scanning can run; map the skill's category for brute force (`authn`) and the answer keys' `rate-limit` explicitly rather than strictly.
+2. Discovery: FastAPI IDOR still SUSPECTED without a collection endpoint; stored-XSS sink pairs, credential-log locations and single-use tokens still not auto-identified (BUILD-LOG session 3, issues 2 and 4). Not changed this session.
+3. ZAP/nuclei are now exercised by the end-to-end agent (nuclei with forced `-ni`), but not by the deterministic harness.
+4. pip/npm tools pinned by version only (self-audit W-002).

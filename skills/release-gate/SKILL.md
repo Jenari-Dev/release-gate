@@ -5,13 +5,25 @@ description: Run a company-grade pre-release gate on any software project (web a
 
 # release-gate
 
-> BUILD STATUS: session 3 of 4. All thirteen phases (0–13) have playbooks in
-> `references/`, the quick / retest / ci / explain modes are documented in
-> `references/modes/`, per-stack notes are in `references/stacks/`, and CI / k6 /
-> report templates are in `templates/`. The eval harness runs in both **guided**
-> and **discovery** modes. Still improvise nothing: if a phase's reference or a
-> tool is missing at run time, report `NOT-TESTED` with the exact reason, never a
-> pass. Session 4 is polish + the end-to-end agent eval + publish.
+> BUILD STATUS: complete — v1 (plugin 0.1.0). Every phase (0–13), run mode and
+> script named below ships in this plugin.
+
+> **Report `NOT-TESTED`, never improvise.** If a phase reference, a script, a tool,
+> a payload or a running target is missing or fails, the affected checks are
+> `NOT-TESTED` with the exact reason. Never substitute a guess, a hand-written
+> stand-in scan, or a pass. A gate that could not look must say so.
+
+## Run modes
+| Invocation | What runs | Verdict |
+|---|---|---|
+| `/release-gate full` (default) | phases 0–13 in order via the router below | BLOCK / SHIP WITH ACCEPTED RISKS / SHIP |
+| `/release-gate quick` | `references/modes/quick.md`: secrets, SCA, SAST, own tests, policy consistency | capped at SHIP WITH ACCEPTED RISKS |
+| `/release-gate legal` | intake, then phases 1, 7, 8 (data map, privacy, legal drafts); report via 13 | NOT-EVALUATED (drafts, not a release decision) |
+| `/release-gate retest` | `references/modes/retest.md` + `scripts/retest.py` | recomputed from the re-run checks |
+| `/release-gate ci` | `references/modes/ci.md`: writes a CI workflow only when asked; runs nothing | none |
+| `/release-gate explain <id>` | `references/modes/explain.md` + `scripts/explain_finding.py` | unchanged |
+
+In a non-interactive run (headless, CI, or a user who says they can't answer), take the conservative default for each intake question, record it in `config.yaml` with `answers_source: assumed`, and never widen scope: dynamic tests still need a target the user named.
 
 ## Non-negotiable principles (everything else is subordinate)
 
@@ -39,6 +51,7 @@ For every Critical/High finding, and every `VERIFIED-ABSENT` on a critical categ
 - Production only with a typed confirmation naming the exact URL, and never fuzz / stress / spike / soak or destructive tests there.
 - Never test third parties the project calls (payments, OAuth, CDNs, APIs): mock them or use their sandbox.
 - Only synthetic data and test accounts you create.
+- **Read-proofs touch only canaries you planted.** SSRF, path traversal and file-read proofs may read only an HTTP canary listener you started or a random-token canary file you created in a scratch dir you own. Never read pre-existing host files (`/etc/*`, `~`, `/proc`, env files, keys, cloud credentials) or metadata endpoints, even on localhost. If a scheme reaches the filesystem, demonstrate with the planted canary and stop (`references/03-dynamic-security.md`; `report_lint.py` fails evidence carrying the hostname or a passwd line).
 - `scripts/run_tool.py` and `rglib.check_scope` enforce this and fail closed.
 
 ### 4. Legal honesty
@@ -84,6 +97,7 @@ Write for a solo developer. Lead with what an attacker could do, then the techni
 | `explain_finding.py --project P <id>` | plain-language explanation of one finding (explain mode); never changes a class or status |
 | `report_build.py --project P --mode M` | verdict + md/html/sarif/json report; runs the lint |
 | `report_lint.py` | banned phrases, passes without artifacts, missing classes, secrets |
+| `render_report.py --project P [--mode M]` | optional: render `templates/report/report.html.tmpl` from the same data (escaped, enum-guarded, linted) |
 
 ## Phase router (run only the phase whose reference you have loaded)
 Load the one reference file for the phase you are in, do the phase, then move on — this keeps context small.

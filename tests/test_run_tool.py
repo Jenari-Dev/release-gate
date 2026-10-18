@@ -243,3 +243,12 @@ def test_docker_always_without_docker_is_not_run(env):
 def test_project_must_exist(env, tmp_path, capsys):
     rc = rt.main(["--project", str(tmp_path / "nope"), "--tool", "rgfake", "--lock", str(env["lock"])])
     assert rc == 2
+
+
+def test_nuclei_offline_flags_are_forced():
+    import run_tool
+    args, added = run_tool.force_offline_flags("nuclei", ["-u", "http://127.0.0.1:1"])
+    assert "-ni" in args and "-duc" in args and added == ["-ni", "-duc"]
+    args, added = run_tool.force_offline_flags("nuclei", ["-no-interactsh", "-duc"])
+    assert added == []
+    assert run_tool.force_offline_flags("gitleaks", ["dir", "."]) == (["dir", "."], [])

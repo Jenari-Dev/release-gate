@@ -89,6 +89,11 @@ def resolve_tool(name: str, lock: dict) -> Path | None:
             cand = d / n
             if _is_exe(cand):
                 return cand
+    # payload tools (archive-dir, e.g. ZAP) live under share_dir at exe_rel
+    if entry.get("exe_rel") and lock.get("share_dir"):
+        cand = expand(lock["share_dir"]) / entry["exe_rel"]
+        if _is_exe(cand):
+            return cand
     return None
 
 

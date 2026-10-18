@@ -10,6 +10,11 @@ Start the app locally with synthetic data and try to break it. Each issue gets a
 - Only synthetic data and test accounts you create. Never real credentials, never production data.
 - Production targets: passive/scan/authz/exploit/load only, typed confirmation, no fuzz/stress/spike/soak, no data-deleting requests.
 - Exploit probes must be non-destructive: markers and canaries, no `DROP`, no deletes, no mass requests. Brute-force and enumeration probes stay below ~50 requests.
+- **Read-proofs touch only canaries you planted.** SSRF, path traversal, file inclusion, XXE and any other "the server will read X for me" proof may only read:
+  - an HTTP canary listener you start yourself on a free loopback port, serving a random token; or
+  - a canary file you create, with a random token, in a scratch directory you own (`.release-gate/evidence/<check>/canary-<token>.txt`).
+
+  Never read pre-existing host files (`/etc/*`, `~`, `/proc`, `.env`/env files, SSH keys, cloud credential files) or any metadata endpoint (`169.254.169.254`, `metadata.google.internal`, and their loopback stand-ins), even on localhost and even when a fixture invites it. If a scheme reaches the filesystem (`file://`, `../`), demonstrate it with your planted canary file and stop: one token read is the whole proof. Anything else would copy real host secrets into evidence and reports. `report_lint.py` fails a run whose evidence contains this machine's hostname or a passwd line.
 
 ## Step 1: Start the app (DYN-APP-START)
 1. Take `surface.start_command` (confirm with the user: it executes project code). Bind to loopback, fake secrets in env, seeded test DB. Use the project's own seed script or create data through its API.
@@ -55,9 +60,9 @@ For each, save the exact curl/script (`repro-script`) and the response (`request
 
 | check_id | Critical | Probe |
 |---|---|---|
-| SEC-INJECTION-DYNAMIC | yes | Per input from the attack-surface table: SQLi (single quote error diff, boolean pair, short `sleep`), command injection (`;echo RGMARK`), template (`{{7*7}}`), path traversal (read a canary file you placed, not system files). Success = marker/canary in the response. |
+| SEC-INJECTION-DYNAMIC | yes | Per input from the attack-surface table: SQLi (single quote error diff, boolean pair, short `sleep`), command injection (`;echo RGMARK`), template (`{{7*7}}`), path traversal (only the canary file you planted; never system files, see preconditions). Success = marker/canary in the response. |
 | SEC-XSS-DYNAMIC | no | Unique payload (`<img src=x onerror=...rgmark>`) stored/reflected; EXPLOITED if returned unescaped in an executable HTML context (confirm in the Playwright Chromium if available), else `VERIFIED-ABSENT` for that sink. |
-| SEC-SSRF-DYNAMIC | no | For URL-taking features, point at a listener you start on a free loopback port (in scope). A callback hit = `EXPLOITED`. Never aim at cloud metadata or third-party hosts. |
+| SEC-SSRF-DYNAMIC | no | For URL-taking features, point at a canary listener you start on a free loopback port (in scope), serving a random token. A callback hit or the token in the response = `EXPLOITED`. If `file://` is accepted, read only your planted canary file and stop. Never aim at cloud metadata, internal services the app ships with, host files, or third-party hosts. Allowlist/DNS-rebinding bypass probes use only names that resolve without a third party (`localhost`, `*.localhost`, an `/etc/hosts`-free numeric form like `http://2130706433/`); never public wildcard-DNS services (`nip.io`, `sslip.io`, `xip.io`) or Interactsh/OAST hosts, since resolving them contacts a third party. |
 | SEC-AUTHN-BRUTEFORCE | yes | ~30 wrong passwords for a test account at normal speed; record lockout / 429 / delay. No limiting observed after N attempts = `EXPLOITED` (state N). |
 | SEC-AUTHN-ENUMERATION | yes | Compare login, reset and register for an existing vs nonexistent account: status, body, headers, timing. Any distinguishable difference = `EXPLOITED`. |
 | SEC-SESSION | yes | Cookie flags (`HttpOnly`, `Secure` when served over TLS, `SameSite`); old token/cookie reused after logout and after password change must be rejected. |
@@ -79,10 +84,10 @@ Both run only against in-scope targets via `run_tool.py` (it refuses out-of-scop
 SHARE=~/.local/share/release-gate
 run_tool.py --project P --tool nuclei --target http://127.0.0.1:3101 --test-type scan -- \
   -u http://127.0.0.1:3101 -t $SHARE/nuclei-templates/http/misconfiguration \
-  -t $SHARE/nuclei-templates/http/exposures -severity info,low,medium -rl 20 -duc \
+  -t $SHARE/nuclei-templates/http/exposures -severity info,low,medium -rl 20 -duc -ni \
   -jsonl -o {evidence}/nuclei.jsonl
 ```
-No fuzzing, DoS, brute-force, default-login or `cves` dirs, no destructive templates, no template downloads or `-update-templates`.
+`-ni` (no Interactsh) is mandatory: without it nuclei registers with a public out-of-band server (`oast.*`), a third party. `-duc` stops its update check. `run_tool.py` adds both if they are missing and records them in `result.json` as `forced_flags`. Never call nuclei directly, outside `run_tool.py`. No fuzzing, DoS, brute-force, default-login or `cves` dirs, no destructive templates, no template downloads or `-update-templates`.
 
 **ZAP baseline (spider + passive only, no active scan).** Write `.release-gate/zap-plan.yaml`:
 ```yaml

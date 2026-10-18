@@ -20,3 +20,8 @@ paths = [
   '''^tests/data/tool-outputs/''',
   '''^tests/test_[a-z_]+\.py$''',
 ]
+
+[[allowlists]]
+description = "False positive: generic-api-key matches the prose 'semgrep/bandit -> SEC-SAST' in the phase-2 playbook (a tool-name pair, not a credential)"
+targetRules = ["generic-api-key"]
+regexes = ['''semgrep/bandit''']

@@ -1,0 +1,1113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:">
+<meta name="color-scheme" content="light dark">
+<title>release-gate: app 2026-10-18</title>
+<style>
+:root{
+  --bg:#fbfaf7;--fg:#1d1d1b;--muted:#5f5e59;--line:#dedbd2;--card:#ffffff;--code:#f2f0ea;
+  --block:#b42318;--risk:#93370d;--ship:#067647;--none:#5f5e59;
+  --c-exploited:#b42318;--c-confirmed:#b54708;--c-suspected:#6941c6;--c-absent:#067647;--c-nottested:#5f5e59;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#141413;--fg:#ecebe6;--muted:#a3a29c;--line:#34332f;--card:#1d1d1b;--code:#262522;
+    --block:#f97066;--risk:#fdb022;--ship:#47cd89;--none:#a3a29c;
+    --c-exploited:#f97066;--c-confirmed:#fdb022;--c-suspected:#b692f6;--c-absent:#47cd89;--c-nottested:#a3a29c;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1100px;margin:0 auto;padding:24px 16px 64px}
+h1{font-size:1.6rem;margin:.2em 0}
+h2{margin-top:2em;border-bottom:1px solid var(--line);padding-bottom:.3em}
+h3{font-size:1.02rem;margin:1.4em 0 .4em}
+p,li{overflow-wrap:anywhere}
+.muted{color:var(--muted)}
+code{background:var(--code);padding:.05em .35em;border-radius:4px;font-size:.92em;overflow-wrap:anywhere}
+.meta{color:var(--muted);font-size:.92rem}
+
+/* Verdict: label text is always present; colour is secondary. */
+.verdict{display:inline-block;padding:.35em .8em;border-radius:8px;font-weight:700;letter-spacing:.02em;border:2px solid currentColor;background:var(--card)}
+.v-BLOCK{color:var(--block)}
+.v-SHIP-WITH-ACCEPTED-RISKS{color:var(--risk)}
+.v-SHIP{color:var(--ship)}
+.v-NOT-EVALUATED{color:var(--none)}
+
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--card)}
+table{border-collapse:collapse;width:100%;font-size:.88rem}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{background:var(--card);white-space:nowrap}
+
+/* Evidence class badges: distinct colour AND distinct glyph AND the class name as text. */
+.badge{display:inline-block;white-space:nowrap;font-weight:700;font-size:.8rem;padding:.1em .55em;border-radius:999px;border:2px solid currentColor;background:var(--card)}
+.badge::before{margin-right:.35em}
+.ec-EXPLOITED{color:var(--c-exploited)}
+.ec-EXPLOITED::before{content:"\25A0"}        /* filled square */
+.ec-TOOL-CONFIRMED{color:var(--c-confirmed)}
+.ec-TOOL-CONFIRMED::before{content:"\25C6"}   /* filled diamond */
+.ec-SUSPECTED{color:var(--c-suspected);border-style:double}
+.ec-SUSPECTED::before{content:"\25B2"}        /* filled triangle */
+.ec-VERIFIED-ABSENT{color:var(--c-absent)}
+.ec-VERIFIED-ABSENT::before{content:"\25CF"}  /* filled circle */
+.ec-NOT-TESTED{color:var(--c-nottested);border-style:dashed}
+.ec-NOT-TESTED::before{content:"\25CB"}       /* open circle */
+.ec-N-A{color:var(--c-nottested);border-style:dotted}
+.ec-N-A::before{content:"\2013"}
+
+.sev{font-weight:700;text-transform:uppercase;font-size:.8rem}
+.legend{display:flex;flex-wrap:wrap;gap:8px;margin:.6em 0}
+.counts{display:flex;flex-wrap:wrap;gap:8px 20px;margin:.8em 0;padding:0;list-style:none}
+.counts li strong{font-size:1.15rem}
+.finding{border:1px solid var(--line);border-radius:8px;background:var(--card);padding:10px 14px;margin:12px 0}
+.finding h3{margin-top:.2em}
+.finding dl{margin:.4em 0 0;display:grid;grid-template-columns:max-content 1fr;gap:2px 12px}
+.finding dt{color:var(--muted)}
+.finding dd{margin:0;overflow-wrap:anywhere}
+.disclaimer{border:2px solid var(--line);border-radius:8px;background:var(--card);padding:12px 16px;margin-top:2em}
+
+@media (max-width:640px){
+  th,td{padding:5px 6px}
+  .finding dl{grid-template-columns:1fr}
+}
+@media print{
+  :root{--bg:#fff;--fg:#000;--muted:#333;--line:#999;--card:#fff;--code:#eee}
+  body{font-size:11pt}
+  main{max-width:none;padding:0}
+  .tablewrap{overflow:visible;border-color:#999}
+  table{font-size:9pt}
+  tr,.finding{break-inside:avoid}
+  h2{break-after:avoid}
+  a{color:inherit;text-decoration:none}
+}
+</style>
+</head>
+<body>
+<main>
+
+
+<header>
+  <h1>release-gate: app 2026-10-18</h1>
+  <p class="meta">Product: <strong>app</strong> &middot; Date: 2026-10-18 &middot; Mode: <code>full</code> &middot; Generated: 2026-10-18T14:18:58+00:00</p>
+</header>
+
+<section id="verdict">
+  <h2>1. Verdict</h2>
+  <p><span class="verdict v-BLOCK">BLOCK</span></p>
+
+  <h3>Blocking</h3>
+  <ul>
+  
+    <li>RG-INJECTIO-006: EXPLOITED high — SQL injection: /api/search interpolates q into SQL (unauthenticated)</li>
+  
+    <li>RG-SSRF-007: EXPLOITED high — SSRF + local file read: /api/fetch-preview fetches any URL incl. file:// for any logged-in user</li>
+  
+    <li>RG-LOGGING-008: EXPLOITED high — Plaintext passwords written to the log (and stdout) on every login attempt</li>
+  
+    <li>RG-DELETION-029: EXPLOITED high — Account deletion is a no-op: DELETE /api/account says &#x27;deleted&#x27; but the user can still log in</li>
+  
+    <li>RG-AUTHZ-010: EXPLOITED critical — Broken access control: bob can read alice&#x27;s resource via GET /api/messages/&#123;id}</li>
+  
+    <li>RG-AUTHZ-011: EXPLOITED critical — Broken access control: alice can read bob&#x27;s resource via GET /api/messages/&#123;id}</li>
+  
+    <li>RG-POLICYMISMATCH-001: unwaived high (TOOL-CONFIRMED) — Privacy policy claims no data sharing, but the code sends data to a third party</li>
+  
+    <li>RG-POLICYMISMATCH-002: unwaived high (SUSPECTED) — Privacy policy promises deletion, but no deletion implementation was found</li>
+  
+  
+  </ul>
+
+  <h3>Why this verdict</h3>
+  <ul>
+  
+    <li>RG-INJECTIO-006: EXPLOITED high — SQL injection: /api/search interpolates q into SQL (unauthenticated)</li>
+  
+    <li>RG-SSRF-007: EXPLOITED high — SSRF + local file read: /api/fetch-preview fetches any URL incl. file:// for any logged-in user</li>
+  
+    <li>RG-LOGGING-008: EXPLOITED high — Plaintext passwords written to the log (and stdout) on every login attempt</li>
+  
+    <li>RG-DELETION-029: EXPLOITED high — Account deletion is a no-op: DELETE /api/account says &#x27;deleted&#x27; but the user can still log in</li>
+  
+    <li>RG-AUTHZ-010: EXPLOITED critical — Broken access control: bob can read alice&#x27;s resource via GET /api/messages/&#123;id}</li>
+  
+    <li>RG-AUTHZ-011: EXPLOITED critical — Broken access control: alice can read bob&#x27;s resource via GET /api/messages/&#123;id}</li>
+  
+    <li>RG-POLICYMISMATCH-001: unwaived high (TOOL-CONFIRMED) — Privacy policy claims no data sharing, but the code sends data to a third party</li>
+  
+    <li>RG-POLICYMISMATCH-002: unwaived high (SUSPECTED) — Privacy policy promises deletion, but no deletion implementation was found</li>
+  
+  </ul>
+
+  <ul class="counts" aria-label="Open findings by severity">
+    <li><strong>2</strong> critical</li>
+    <li><strong>6</strong> high</li>
+    <li><strong>5</strong> medium</li>
+    <li><strong>2</strong> low</li>
+    <li><strong>0</strong> info</li>
+  </ul>
+</section>
+
+<section id="legend">
+  <h2>Evidence classes</h2>
+  <p class="muted">Every row below carries exactly one class. The class name is always printed; the colour and symbol are extra cues.</p>
+  <div class="legend">
+    <span class="badge ec-EXPLOITED">EXPLOITED</span>
+    <span class="badge ec-TOOL-CONFIRMED">TOOL-CONFIRMED</span>
+    <span class="badge ec-SUSPECTED">SUSPECTED</span>
+    <span class="badge ec-VERIFIED-ABSENT">VERIFIED-ABSENT</span>
+    <span class="badge ec-NOT-TESTED">NOT-TESTED</span>
+  </div>
+  <ul class="muted">
+    <li>EXPLOITED: reproduced against a running instance, with a saved request and response.</li>
+    <li>TOOL-CONFIRMED: a tool reported it and the code path was read and confirmed.</li>
+    <li>SUSPECTED: from reading code or judgment; not reproduced.</li>
+    <li>VERIFIED-ABSENT: a specific test ran and the issue did not occur. It covers that test only.</li>
+    <li>NOT-TESTED: not checked. This is not a pass.</li>
+  </ul>
+</section>
+
+<section id="coverage">
+  <h2>2. Coverage matrix</h2>
+  <p class="muted">What was actually checked, and how strong the evidence is.</p>
+  <div class="tablewrap">
+  <table>
+    <thead>
+      <tr><th>Check</th><th>Phase</th><th>Critical</th><th>Evidence class</th><th>Result</th><th>Detail</th><th>Artifact</th></tr>
+    </thead>
+    <tbody>
+    
+      <tr>
+        <td><code>RECON-ATTACK-SURFACE</code> Attack surface enumerated (routes, methods, auth, inputs)</td>
+        <td>1</td>
+        <td></td>
+        <td><span class="badge ec-VERIFIED-ABSENT">VERIFIED-ABSENT</span></td>
+        <td>no issue observed</td>
+        <td>Attack surface enumerated by extract_routes.py for 8 routes in app/main.py; not exhaustive</td>
+        <td>evidence/recon/attack-surface.json</td>
+      </tr>
+    
+      <tr>
+        <td><code>RECON-DATA-INVENTORY</code> Data inventory built from code and confirmed by user</td>
+        <td>1</td>
+        <td></td>
+        <td><span class="badge ec-SUSPECTED">SUSPECTED</span></td>
+        <td>unresolved</td>
+        <td>Draft data inventory built from code; NOT confirmed by user (confirmed_by_user false)</td>
+        <td>data-inventory.yaml</td>
+      </tr>
+    
+      <tr>
+        <td><code>SEC-SECRETS-HISTORY</code> Secrets in full git history (gitleaks)</td>
+        <td>2</td>
+        <td>yes</td>
+        <td><span class="badge ec-TOOL-CONFIRMED">TOOL-CONFIRMED</span></td>
+        <td>issue found (1)</td>
+        <td>RG-SECRETS-005</td>
+        <td>evidence/gitleaks-20261018T140401Z/gitleaks.json, evidence/bandit-20261018T140409Z/bandit.json</td>
+      </tr>
+    
+      <tr>
+        <td><code>SEC-SECRETS-VERIFIED</code> Live-secret verification (trufflehog --results=verified)</td>
+        <td>2</td>
+        <td>yes</td>
+        <td><span class="badge ec-NOT-TESTED">NOT-TESTED</span></td>
+        <td>not tested</td>
+        <td>live verification not authorised (third-party contact)</td>
+        <td>—</td>
+      </tr>
+    
+      <tr>
+        <td><code>SEC-SECRETS-ARTIFACTS</code> Secrets in client bundles, build artifacts and images</td>
+        <td>2</td>
+        <td>yes</td>
+        <td><span class="badge ec-NOT-TESTED">NOT-TESTED</span></td>
+        <td>not tested</td>
+        <td>no build artifacts present</td>
+        <td>—</td>
+      </tr>
+    
+      <tr>
+        <td><code>SEC-SAST</code> Static analysis (semgrep + language tools)</td>
+        <td>2</td>
+        <td></td>
+        <td><span class="badge ec-EXPLOITED">EXPLOITED</span></td>
+        <td>issue found (1)</td>
+        <td>RG-INJECTIO-006</td>
+        <td>evidence/sqli/search.txt, evidence/semgrep-20261018T140402Z/semgrep.json, evidence/probes.py, evidence/semgrep-20261018T140402Z/semgrep.json, evidence/bandit-20261018T140409Z/bandit.json</td>
+      </tr>
+    
+      <tr>
+        <td><code>SEC-SCA</code> Known-vulnerable dependencies (osv-scanner + ecosystem auditor)</td>
+        <td>2</td>
+        <td></td>
+        <td><span class="badge ec-TOOL-CONFIRMED">TOOL-CONFIRMED</span></td>
+        <td>issue found (1)</td>
+        <td>RG-SCA-013</td>
+        <td>evidence/pip-audit-20261018T140409Z/pip-audit.json, evidence/osv-scanner-20261018T140415Z/osv-scanner.json</td>
+      </tr>
+    
+      <tr>
+        <td><code>SEC-IAC</code> IaC and container configuration (trivy config, hadolint, checkov)</td>
+        <td>2</td>
+        <td></td>
+        <td><span class="badge ec-NOT-TESTED">NOT-TESTED</span></td>
+        <td>not tested</td>
+        <td>no IaC or container files present</td>
+        <td>—</td>
+      </tr>
+    
+      <tr>
+        <td><code>SEC-SBOM</code> CycloneDX SBOM generated (syft)</td>
+        <td>2</td>
+        <td></td>
+        <td><span class="badge ec-VERIFIED-ABSENT">VERIFIED-ABSENT</span></td>
+        <td>no issue observed</td>
+        <td>CycloneDX SBOM generated (syft 1.54.0) for app/</td>
+        <td>evidence/syft-20261018T140421Z/sbom.cdx.json</td>
+      </tr>
+    
+      <tr>
+        <td><code>SEC-MANUAL-REVIEW</code> Manual review for logic flaws scanners miss</td>
+        <td>2</td>
+        <td></td>
+        <td><span class="badge ec-SUSPECTED">SUSPECTED</span></td>
+        <td>unresolved</td>
+        <td>Manual review of app/main.py, db.py, sidecars.py, config.py performed; issues recorded as findings. Note: DELETE /api/account is a no-op</td>
+        <td>data-inventory.yaml</td>
+      </tr>
+    
+      <tr>
+        <td><code>DYN-APP-START</code> Application started locally with seeded test data</td>
+        <td>3</td>
+        <td></td>
+        <td><span class="badge ec-VERIFIED-ABSENT">VERIFIED-ABSENT</span></td>
+        <td>no issue observed</td>
+        <td>Application already running locally at 127.0.0.1:3103 and answering /health (started by user, not by me)</td>
+        <td>evidence/app-start/health.txt</td>
+      </tr>
+    
+      <tr>
+        <td><code>SEC-AUTHZ-MATRIX</code> Authorization matrix (every role x endpoint x other users&#x27; resources)</td>
+        <td>3</td>
+        <td>yes</td>
+        <td><span class="badge ec-EXPLOITED">EXPLOITED</span></td>
+        <td>issue found (2)</td>
+        <td>RG-AUTHZ-010, RG-AUTHZ-011</td>
+        <td>evidence/authz/GET_api_messages_1_as_bob.txt, evidence/authz/GET_api_messages_2_as_alice.txt</td>
+      </tr>
+    
+      <tr>
+        <td><code>SEC-INJECTION-DYNAMIC</code> Injection repros (SQLi, command, template, path traversal)</td>
+        <td>3</td>
+        <td>yes</td>
+        <td><span class="badge ec-SUSPECTED">SUSPECTED</span></td>
+        <td>unresolved</td>
+        <td>Injection probes: only the search endpoint was probed; SQLi found (see finding)</td>
+        <td>evidence/sqli/search.txt</td>
+      </tr>
+    
+      <tr>
+        <td><code>SEC-XSS-DYNAMIC</code> Stored / reflected XSS repros</td>
+        <td>3</td>
+        <td></td>
+        <td><span class="badge ec-N-A">N/A</span></td>
+        <td>not applicable</td>
+        <td>does not apply to this product (config)</td>
+        <td>—</td>
+      </tr>
+    
+      <tr>
+        <td><code>SEC-SSRF-DYNAMIC</code> SSRF repros against URL-fetching features</td>
+        <td>3</td>
+        <td></td>
+        <td><span class="badge ec-EXPLOITED">EXPLOITED</span></td>
+        <td>issue found (1)</td>
+        <td>RG-SSRF-007</td>
+        <td>evidence/ssrf/ssrf.txt, evidence/ssrf/file-scheme.txt, evidence/bandit-20261018T140409Z/bandit.json</td>
+      </tr>
+    
+      <tr>
+        <td><code>SEC-AUTHN-BRUTEFORCE</code> Brute-force protection / rate limiting measured on auth endpoints</td>
+        <td>3</td>
+        <td>yes</td>
+        <td><span class="badge ec-EXPLOITED">EXPLOITED</span></td>
+        <td>issue found (1)</td>
+        <td>RG-AUTHN-009</td>
+        <td>evidence/bruteforce/bf.txt, evidence/probes.py</td>
+      </tr>
+    
+      <tr>
+        <td><code>SEC-AUTHN-ENUMERATION</code> Account enumeration via response differences</td>
+        <td>3</td>
+        <td>yes</td>
+        <td><span class="badge ec-EXPLOITED">EXPLOITED</span></td>
+        <td>issue found (1)</td>
+        <td>RG-AUTHN-010</td>
+        <td>evidence/enum/enum.txt, evidence/probes.py</td>
+      </tr>
+    
+      <tr>
+        <td><code>SEC-SESSION</code> Session cookie flags, invalidation on logout / password change</td>
+        <td>3</td>
+        <td>yes</td>
+        <td><span class="badge ec-NOT-TESTED">NOT-TESTED</span></td>
+        <td>not tested</td>
+        <td>no logout or password-change endpoint exists to test token invalidation; tokens are in-memory bearer tokens with no expiry (code: app/main.py:25,72)</td>
+        <td>—</td>
+      </tr>
+    
+      <tr>
+        <td><code>SEC-CSRF</code> CSRF protection on state-changing requests</td>
+        <td>3</td>
+        <td></td>
+        <td><span class="badge ec-N-A">N/A</span></td>
+        <td>not applicable</td>
+        <td>does not apply to this product (config)</td>
+        <td>—</td>
+      </tr>
+    
+      <tr>
+        <td><code>SEC-HEADERS-CORS</code> Security headers and CORS with hostile origins</td>
+        <td>3</td>
+        <td></td>
+        <td><span class="badge ec-EXPLOITED">EXPLOITED</span></td>
+        <td>issue found (1)</td>
+        <td>RG-HEADERS-012</td>
+        <td>evidence/headers/headers.txt</td>
+      </tr>
+    
+      <tr>
+        <td><code>SEC-UPLOADS</code> File upload validation, limits, served content-type</td>
+        <td>3</td>
+        <td></td>
+        <td><span class="badge ec-NOT-TESTED">NOT-TESTED</span></td>
+        <td>not tested</td>
+        <td>no result recorded</td>
+        <td>—</td>
+      </tr>
+    
+      <tr>
+        <td><code>SEC-ERROR-LEAKS</code> Error responses leak no stack traces, SQL, paths or secrets</td>
+        <td>3</td>
+        <td>yes</td>
+        <td><span class="badge ec-EXPLOITED">EXPLOITED</span></td>
+        <td>issue found (1)</td>
+        <td>RG-DATAEXPO-011</td>
+        <td>evidence/errors/errors.txt</td>
+      </tr>
+    
+      <tr>
+        <td><code>SEC-DAST-SCAN</code> ZAP baseline/API scan and nuclei safe templates</td>
+        <td>3</td>
+        <td></td>
+        <td><span class="badge ec-NOT-TESTED">NOT-TESTED</span></td>
+        <td>not tested</td>
+        <td>nuclei run did not finish in this run; ZAP not run</td>
+        <td>—</td>
+      </tr>
+    
+      <tr>
+        <td><code>COR-TEST-SUITE</code> Existing test suite pass/fail and coverage</td>
+        <td>4</td>
+        <td></td>
+        <td><span class="badge ec-NOT-TESTED">NOT-TESTED</span></td>
+        <td>not tested</td>
+        <td>project has no tests</td>
+        <td>—</td>
+      </tr>
+    
+      <tr>
+        <td><code>COR-FUZZ</code> Property-based tests / fuzzing of parsers and input handlers</td>
+        <td>4</td>
+        <td></td>
+        <td><span class="badge ec-NOT-TESTED">NOT-TESTED</span></td>
+        <td>not tested</td>
+        <td>not run in this pass</td>
+        <td>—</td>
+      </tr>
+    
+      <tr>
+        <td><code>COR-RACE</code> Race conditions on operations that must be atomic</td>
+        <td>4</td>
+        <td></td>
+        <td><span class="badge ec-NOT-TESTED">NOT-TESTED</span></td>
+        <td>not tested</td>
+        <td>not run in this pass</td>
+        <td>—</td>
+      </tr>
+    
+      <tr>
+        <td><code>PERF-LOAD-PROFILES</code> Baseline / load / stress / spike / soak profiles</td>
+        <td>5</td>
+        <td></td>
+        <td><span class="badge ec-NOT-TESTED">NOT-TESTED</span></td>
+        <td>not tested</td>
+        <td>not run in this pass; traffic expectations are assumed defaults</td>
+        <td>—</td>
+      </tr>
+    
+      <tr>
+        <td><code>PERF-FAILURE-MODES</code> Behaviour with DB down, third-party timeout, disk full</td>
+        <td>5</td>
+        <td></td>
+        <td><span class="badge ec-NOT-TESTED">NOT-TESTED</span></td>
+        <td>not tested</td>
+        <td>not run in this pass</td>
+        <td>—</td>
+      </tr>
+    
+      <tr>
+        <td><code>OPS-BACKUP-RESTORE</code> Backup restored into scratch environment and verified</td>
+        <td>6</td>
+        <td></td>
+        <td><span class="badge ec-NOT-TESTED">NOT-TESTED</span></td>
+        <td>not tested</td>
+        <td>database is in-memory and re-seeded at boot; no backup mechanism exists to test</td>
+        <td>—</td>
+      </tr>
+    
+      <tr>
+        <td><code>OPS-LOG-HYGIENE</code> No credentials or unnecessary personal data in captured logs</td>
+        <td>6</td>
+        <td></td>
+        <td><span class="badge ec-EXPLOITED">EXPLOITED</span></td>
+        <td>issue found (1)</td>
+        <td>RG-LOGGING-008</td>
+        <td>evidence/privacy/applog_tail.txt, evidence/semgrep-20261018T140402Z/semgrep.json</td>
+      </tr>
+    
+      <tr>
+        <td><code>OPS-DEPLOY-CONFIG</code> Prod debug off, secrets from env, rollback + reversible migrations</td>
+        <td>6</td>
+        <td></td>
+        <td><span class="badge ec-NOT-TESTED">NOT-TESTED</span></td>
+        <td>not tested</td>
+        <td>no deploy config present</td>
+        <td>—</td>
+      </tr>
+    
+      <tr>
+        <td><code>OPS-EMAIL-DNS</code> SPF / DKIM / DMARC for sending domains</td>
+        <td>6</td>
+        <td></td>
+        <td><span class="badge ec-N-A">N/A</span></td>
+        <td>not applicable</td>
+        <td>does not apply to this product (config)</td>
+        <td>—</td>
+      </tr>
+    
+      <tr>
+        <td><code>PRIV-REGIME-MAPPING</code> Applicable privacy regimes mapped and obligations evaluated</td>
+        <td>7</td>
+        <td></td>
+        <td><span class="badge ec-NOT-TESTED">NOT-TESTED</span></td>
+        <td>not tested</td>
+        <td>not performed in this pass; operator, regions and jurisdiction are assumptions</td>
+        <td>—</td>
+      </tr>
+    
+      <tr>
+        <td><code>PRIV-RIGHTS-TESTED</code> Export / deletion / correction executed for a test user and verified</td>
+        <td>7</td>
+        <td></td>
+        <td><span class="badge ec-EXPLOITED">EXPLOITED</span></td>
+        <td>issue found (1)</td>
+        <td>RG-DELETION-029</td>
+        <td>evidence/privacy/delete.txt, data-inventory.yaml</td>
+      </tr>
+    
+      <tr>
+        <td><code>PRIV-COOKIE-AUDIT</code> Cookies / trackers before consent, after reject, after accept</td>
+        <td>7</td>
+        <td></td>
+        <td><span class="badge ec-N-A">N/A</span></td>
+        <td>not applicable</td>
+        <td>does not apply to this product (config)</td>
+        <td>—</td>
+      </tr>
+    
+      <tr>
+        <td><code>PRIV-MINIMIZATION</code> Collected fields with no use in code</td>
+        <td>7</td>
+        <td></td>
+        <td><span class="badge ec-EXPLOITED">EXPLOITED</span></td>
+        <td>issue found (1)</td>
+        <td>RG-PRIVACY-030</td>
+        <td>evidence/privacy/analytics_events.json</td>
+      </tr>
+    
+      <tr>
+        <td><code>LEGAL-POLICY-CONSISTENCY</code> Policy claims checked against data inventory and code</td>
+        <td>8</td>
+        <td></td>
+        <td><span class="badge ec-TOOL-CONFIRMED">TOOL-CONFIRMED</span></td>
+        <td>issue found (2)</td>
+        <td>RG-POLICYMISMATCH-001, RG-POLICYMISMATCH-002</td>
+        <td>evidence/privacy-policy-served.html</td>
+      </tr>
+    
+      <tr>
+        <td><code>LEGAL-DOCS-GENERATED</code> Applicable legal document drafts generated</td>
+        <td>8</td>
+        <td></td>
+        <td><span class="badge ec-NOT-TESTED">NOT-TESTED</span></td>
+        <td>not tested</td>
+        <td>legal documents not generated in this pass</td>
+        <td>—</td>
+      </tr>
+    
+      <tr>
+        <td><code>PLAT-DISCLOSURES</code> Store privacy disclosures match the policy</td>
+        <td>9</td>
+        <td></td>
+        <td><span class="badge ec-N-A">N/A</span></td>
+        <td>not applicable</td>
+        <td>does not apply to this product (config)</td>
+        <td>—</td>
+      </tr>
+    
+      <tr>
+        <td><code>A11Y-AUTOMATED</code> axe-core / pa11y on key pages (WCAG 2.2 AA, automated subset)</td>
+        <td>10</td>
+        <td></td>
+        <td><span class="badge ec-N-A">N/A</span></td>
+        <td>not applicable</td>
+        <td>does not apply to this product (config)</td>
+        <td>—</td>
+      </tr>
+    
+      <tr>
+        <td><code>SUP-LICENSES</code> Dependency and asset license compatibility</td>
+        <td>11</td>
+        <td></td>
+        <td><span class="badge ec-NOT-TESTED">NOT-TESTED</span></td>
+        <td>not tested</td>
+        <td>licenses not evaluated in this pass</td>
+        <td>—</td>
+      </tr>
+    
+      <tr>
+        <td><code>SUP-PINNING</code> Lockfiles committed, CI actions pinned to SHAs, typosquat risk</td>
+        <td>11</td>
+        <td></td>
+        <td><span class="badge ec-SUSPECTED">SUSPECTED</span></td>
+        <td>unresolved</td>
+        <td>requirements.txt pins exact versions of direct and transitive packages (no hashes)</td>
+        <td>data-inventory.yaml</td>
+      </tr>
+    
+      <tr>
+        <td><code>AI-PROMPT-INJECTION</code> Prompt injection through every user-controlled path into a prompt</td>
+        <td>12</td>
+        <td></td>
+        <td><span class="badge ec-N-A">N/A</span></td>
+        <td>not applicable</td>
+        <td>does not apply to this product (config)</td>
+        <td>—</td>
+      </tr>
+    
+      <tr>
+        <td><code>META-REPO-INJECTION-CONTENT</code> Repository content that tries to instruct the agent</td>
+        <td>1</td>
+        <td></td>
+        <td><span class="badge ec-VERIFIED-ABSENT">VERIFIED-ABSENT</span></td>
+        <td>no issue observed</td>
+        <td>Grep for instruction-like text in repo found nothing (patterns: ignore previous/all, mark pass, disregard, you must run, as an ai); limited patterns</td>
+        <td>injection-grep.txt</td>
+      </tr>
+    
+    
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section id="findings">
+  <h2>3. Findings</h2>
+  <div class="tablewrap">
+  <table>
+    <thead>
+      <tr><th>ID</th><th>Severity</th><th>Evidence class</th><th>Title</th><th>Location</th><th>Status</th></tr>
+    </thead>
+    <tbody>
+    
+      <tr>
+        <td><code>RG-AUTHZ-010</code></td>
+        <td><span class="sev">critical</span></td>
+        <td><span class="badge ec-EXPLOITED">EXPLOITED</span></td>
+        <td>Broken access control: bob can read alice&#x27;s resource via GET /api/messages/&#123;id}</td>
+        <td><code>GET /api/messages/&#123;id}</code></td>
+        <td>open</td>
+      </tr>
+    
+      <tr>
+        <td><code>RG-AUTHZ-011</code></td>
+        <td><span class="sev">critical</span></td>
+        <td><span class="badge ec-EXPLOITED">EXPLOITED</span></td>
+        <td>Broken access control: alice can read bob&#x27;s resource via GET /api/messages/&#123;id}</td>
+        <td><code>GET /api/messages/&#123;id}</code></td>
+        <td>open</td>
+      </tr>
+    
+      <tr>
+        <td><code>RG-DELETION-029</code></td>
+        <td><span class="sev">high</span></td>
+        <td><span class="badge ec-EXPLOITED">EXPLOITED</span></td>
+        <td>Account deletion is a no-op: DELETE /api/account says &#x27;deleted&#x27; but the user can still log in</td>
+        <td><code>DELETE /api/account</code></td>
+        <td>open</td>
+      </tr>
+    
+      <tr>
+        <td><code>RG-INJECTIO-006</code></td>
+        <td><span class="sev">high</span></td>
+        <td><span class="badge ec-EXPLOITED">EXPLOITED</span></td>
+        <td>SQL injection: /api/search interpolates q into SQL (unauthenticated)</td>
+        <td><code>GET /api/search</code></td>
+        <td>open</td>
+      </tr>
+    
+      <tr>
+        <td><code>RG-LOGGING-008</code></td>
+        <td><span class="sev">high</span></td>
+        <td><span class="badge ec-EXPLOITED">EXPLOITED</span></td>
+        <td>Plaintext passwords written to the log (and stdout) on every login attempt</td>
+        <td><code>app/main.py:67</code></td>
+        <td>open</td>
+      </tr>
+    
+      <tr>
+        <td><code>RG-SSRF-007</code></td>
+        <td><span class="sev">high</span></td>
+        <td><span class="badge ec-EXPLOITED">EXPLOITED</span></td>
+        <td>SSRF + local file read: /api/fetch-preview fetches any URL incl. file:// for any logged-in user</td>
+        <td><code>GET /api/fetch-preview</code></td>
+        <td>open</td>
+      </tr>
+    
+      <tr>
+        <td><code>RG-POLICYMISMATCH-001</code></td>
+        <td><span class="sev">high</span></td>
+        <td><span class="badge ec-TOOL-CONFIRMED">TOOL-CONFIRMED</span></td>
+        <td>Privacy policy claims no data sharing, but the code sends data to a third party</td>
+        <td><code>evidence/privacy-policy-served.html:3</code></td>
+        <td>open</td>
+      </tr>
+    
+      <tr>
+        <td><code>RG-POLICYMISMATCH-002</code></td>
+        <td><span class="sev">high</span></td>
+        <td><span class="badge ec-SUSPECTED">SUSPECTED</span></td>
+        <td>Privacy policy promises deletion, but no deletion implementation was found</td>
+        <td><code>evidence/privacy-policy-served.html:4</code></td>
+        <td>open</td>
+      </tr>
+    
+      <tr>
+        <td><code>RG-AUTHN-009</code></td>
+        <td><span class="sev">medium</span></td>
+        <td><span class="badge ec-EXPLOITED">EXPLOITED</span></td>
+        <td>No rate limiting or lockout on /login: 30 wrong passwords then the correct one accepted</td>
+        <td><code>POST /login</code></td>
+        <td>open</td>
+      </tr>
+    
+      <tr>
+        <td><code>RG-AUTHN-010</code></td>
+        <td><span class="sev">medium</span></td>
+        <td><span class="badge ec-EXPLOITED">EXPLOITED</span></td>
+        <td>Username enumeration via POST /api/register (409 &#x27;username taken&#x27;)</td>
+        <td><code>POST /api/register</code></td>
+        <td>open</td>
+      </tr>
+    
+      <tr>
+        <td><code>RG-DATAEXPO-011</code></td>
+        <td><span class="sev">medium</span></td>
+        <td><span class="badge ec-EXPLOITED">EXPLOITED</span></td>
+        <td>Raw database error text returned by /api/search</td>
+        <td><code>GET /api/search</code></td>
+        <td>open</td>
+      </tr>
+    
+      <tr>
+        <td><code>RG-PRIVACY-030</code></td>
+        <td><span class="sev">medium</span></td>
+        <td><span class="badge ec-EXPLOITED">EXPLOITED</span></td>
+        <td>Email and username sent to the analytics endpoint on every login/signup</td>
+        <td><code>app/main.py:79</code></td>
+        <td>open</td>
+      </tr>
+    
+      <tr>
+        <td><code>RG-SCA-013</code></td>
+        <td><span class="sev">medium</span></td>
+        <td><span class="badge ec-TOOL-CONFIRMED">TOOL-CONFIRMED</span></td>
+        <td>python-multipart 0.0.6 has 8 distinct known advisories (pip-audit reports 16 entries); fixed versions up to 0.0.31</td>
+        <td><code>requirements.txt:3</code></td>
+        <td>open</td>
+      </tr>
+    
+      <tr>
+        <td><code>RG-HEADERS-012</code></td>
+        <td><span class="sev">low</span></td>
+        <td><span class="badge ec-EXPLOITED">EXPLOITED</span></td>
+        <td>No security headers on responses (no X-Content-Type-Options, frame protection, CSP)</td>
+        <td><code>—</code></td>
+        <td>open</td>
+      </tr>
+    
+      <tr>
+        <td><code>RG-SECRETS-005</code></td>
+        <td><span class="sev">low</span></td>
+        <td><span class="badge ec-TOOL-CONFIRMED">TOOL-CONFIRMED</span></td>
+        <td>Hardcoded payment and cloud credential strings in app/config.py (values look like fixtures/placeholders)</td>
+        <td><code>app/config.py:11</code></td>
+        <td>open</td>
+      </tr>
+    
+    
+    </tbody>
+  </table>
+  </div>
+
+  
+  <article class="finding">
+    <h3><code>RG-AUTHZ-010</code> <span class="sev">critical</span> <span class="badge ec-EXPLOITED">EXPLOITED</span></h3>
+    <p>Broken access control: bob can read alice&#x27;s resource via GET /api/messages/&#123;id}</p>
+    <dl>
+      <dt>Location</dt><dd><code>GET /api/messages/&#123;id}</code></dd>
+      <dt>What this means</dt><dd>Any authenticated user (or another user) can read data belonging to a different account by changing the id in the URL.</dd>
+      <dt>Reproduce</dt><dd>Authenticate as bob, request GET /api/messages/1. Observed HTTP 200 and the owner-only canary &#x27;PRIVATE-CANARY&#x27; in the response.</dd>
+      <dt>Suggested fix</dt><dd>Enforce ownership in the query or handler: scope the lookup to the caller&#x27;s id (WHERE owner_id = :caller) and return 404/403 otherwise.</dd>
+      <dt>Reported by</dt><dd>—</dd>
+      <dt>Evidence</dt><dd>evidence/authz/GET_api_messages_1_as_bob.txt</dd>
+    </dl>
+  </article>
+  
+  <article class="finding">
+    <h3><code>RG-AUTHZ-011</code> <span class="sev">critical</span> <span class="badge ec-EXPLOITED">EXPLOITED</span></h3>
+    <p>Broken access control: alice can read bob&#x27;s resource via GET /api/messages/&#123;id}</p>
+    <dl>
+      <dt>Location</dt><dd><code>GET /api/messages/&#123;id}</code></dd>
+      <dt>What this means</dt><dd>Any authenticated user (or another user) can read data belonging to a different account by changing the id in the URL.</dd>
+      <dt>Reproduce</dt><dd>Authenticate as alice, request GET /api/messages/2. Observed HTTP 200 and the owner-only canary &#x27;PRIVATE-CANARY&#x27; in the response.</dd>
+      <dt>Suggested fix</dt><dd>Enforce ownership in the query or handler: scope the lookup to the caller&#x27;s id (WHERE owner_id = :caller) and return 404/403 otherwise.</dd>
+      <dt>Reported by</dt><dd>—</dd>
+      <dt>Evidence</dt><dd>evidence/authz/GET_api_messages_2_as_alice.txt</dd>
+    </dl>
+  </article>
+  
+  <article class="finding">
+    <h3><code>RG-DELETION-029</code> <span class="sev">high</span> <span class="badge ec-EXPLOITED">EXPLOITED</span></h3>
+    <p>Account deletion is a no-op: DELETE /api/account says &#x27;deleted&#x27; but the user can still log in</p>
+    <dl>
+      <dt>Location</dt><dd><code>DELETE /api/account</code></dd>
+      <dt>What this means</dt><dd>Users who ask for erasure keep their data and the policy promises permanent erasure (GDPR Art. 17 style obligation; verify with a lawyer).</dd>
+      <dt>Reproduce</dt><dd>DELETE then log in again: 200.</dd>
+      <dt>Suggested fix</dt><dd>Delete user, messages and sessions; stop analytics copies.</dd>
+      <dt>Reported by</dt><dd>—</dd>
+      <dt>Evidence</dt><dd>evidence/privacy/delete.txt, data-inventory.yaml</dd>
+    </dl>
+  </article>
+  
+  <article class="finding">
+    <h3><code>RG-INJECTIO-006</code> <span class="sev">high</span> <span class="badge ec-EXPLOITED">EXPLOITED</span></h3>
+    <p>SQL injection: /api/search interpolates q into SQL (unauthenticated)</p>
+    <dl>
+      <dt>Location</dt><dd><code>GET /api/search</code></dd>
+      <dt>What this means</dt><dd>Anyone without logging in can alter the query. Boolean payload returned every item row. Other tables (users with password hashes, messages) are in the same database; a UNION read of them was NOT attempted.</dd>
+      <dt>Reproduce</dt><dd>GET /api/search?q=&#x27; OR &#x27;1&#x27;=&#x27;1 returns all items; q=&#x27; returns 500 with sqlite error.</dd>
+      <dt>Suggested fix</dt><dd>Use parameter binding: conn.execute(&#x27;... LIKE ?&#x27;, (f&#x27;%&#123;q}%&#x27;,)).</dd>
+      <dt>Reported by</dt><dd>—</dd>
+      <dt>Evidence</dt><dd>evidence/sqli/search.txt, evidence/semgrep-20261018T140402Z/semgrep.json, evidence/probes.py</dd>
+    </dl>
+  </article>
+  
+  <article class="finding">
+    <h3><code>RG-LOGGING-008</code> <span class="sev">high</span> <span class="badge ec-EXPLOITED">EXPLOITED</span></h3>
+    <p>Plaintext passwords written to the log (and stdout) on every login attempt</p>
+    <dl>
+      <dt>Location</dt><dd><code>app/main.py:67</code></dd>
+      <dt>What this means</dt><dd>Anyone who can read the log file or log aggregation gets users&#x27; passwords, including mistyped ones that are often a neighbouring password.</dd>
+      <dt>Reproduce</dt><dd>Log in with any password, read logs/app.log.</dd>
+      <dt>Suggested fix</dt><dd>Remove the password from the log line.</dd>
+      <dt>Reported by</dt><dd>—</dd>
+      <dt>Evidence</dt><dd>evidence/privacy/applog_tail.txt, evidence/semgrep-20261018T140402Z/semgrep.json</dd>
+    </dl>
+  </article>
+  
+  <article class="finding">
+    <h3><code>RG-SSRF-007</code> <span class="sev">high</span> <span class="badge ec-EXPLOITED">EXPLOITED</span></h3>
+    <p>SSRF + local file read: /api/fetch-preview fetches any URL incl. file:// for any logged-in user</p>
+    <dl>
+      <dt>Location</dt><dd><code>GET /api/fetch-preview</code></dd>
+      <dt>What this means</dt><dd>Any registered user (registration is open) can make the server request internal addresses and read local files through the preview. Proven only against my own canary listener and canary file; internal services the app ships with and host files were deliberately not touched.</dd>
+      <dt>Reproduce</dt><dd>See evidence/ssrf/ssrf.txt.</dd>
+      <dt>Suggested fix</dt><dd>Allow only http/https, resolve and block loopback/private/link-local ranges, use an allowlist.</dd>
+      <dt>Reported by</dt><dd>—</dd>
+      <dt>Evidence</dt><dd>evidence/ssrf/ssrf.txt, evidence/ssrf/file-scheme.txt, evidence/bandit-20261018T140409Z/bandit.json</dd>
+    </dl>
+  </article>
+  
+  <article class="finding">
+    <h3><code>RG-POLICYMISMATCH-001</code> <span class="sev">high</span> <span class="badge ec-TOOL-CONFIRMED">TOOL-CONFIRMED</span></h3>
+    <p>Privacy policy claims no data sharing, but the code sends data to a third party</p>
+    <dl>
+      <dt>Location</dt><dd><code>evidence/privacy-policy-served.html:3</code></dd>
+      <dt>What this means</dt><dd>A user reading the policy would believe their data stays on your servers; it does not.</dd>
+      <dt>Reproduce</dt><dd>Policy (evidence/privacy-policy-served.html:3) states: &quot;never share data with third part&quot;. the inventory records 1 outbound third-party destination(s) (127.0.0.1:3163).</dd>
+      <dt>Suggested fix</dt><dd>Either change the code so the claim is true, or change the policy to describe what the code does.</dd>
+      <dt>Reported by</dt><dd>policy_consistency</dd>
+      <dt>Evidence</dt><dd>evidence/privacy-policy-served.html</dd>
+    </dl>
+  </article>
+  
+  <article class="finding">
+    <h3><code>RG-POLICYMISMATCH-002</code> <span class="sev">high</span> <span class="badge ec-SUSPECTED">SUSPECTED</span></h3>
+    <p>Privacy policy promises deletion, but no deletion implementation was found</p>
+    <dl>
+      <dt>Location</dt><dd><code>evidence/privacy-policy-served.html:4</code></dd>
+      <dt>What this means</dt><dd>Users are told their data is erased; no erase path was found in code, so it may be retained.</dd>
+      <dt>Reproduce</dt><dd>Policy (evidence/privacy-policy-served.html:4) states: &quot;delete your account, all of your personal data&quot;. the inventory records no deletion right implemented in code (rights.deletion is absent). A live deletion test confirms or refutes this.</dd>
+      <dt>Suggested fix</dt><dd>Either change the code so the claim is true, or change the policy to describe what the code does.</dd>
+      <dt>Reported by</dt><dd>policy_consistency</dd>
+      <dt>Evidence</dt><dd>—</dd>
+    </dl>
+  </article>
+  
+  <article class="finding">
+    <h3><code>RG-AUTHN-009</code> <span class="sev">medium</span> <span class="badge ec-EXPLOITED">EXPLOITED</span></h3>
+    <p>No rate limiting or lockout on /login: 30 wrong passwords then the correct one accepted</p>
+    <dl>
+      <dt>Location</dt><dd><code>POST /login</code></dd>
+      <dt>What this means</dt><dd>An attacker can guess passwords at unlimited speed.</dd>
+      <dt>Reproduce</dt><dd>—</dd>
+      <dt>Suggested fix</dt><dd>Per-account and per-IP throttling/lockout.</dd>
+      <dt>Reported by</dt><dd>—</dd>
+      <dt>Evidence</dt><dd>evidence/bruteforce/bf.txt, evidence/probes.py</dd>
+    </dl>
+  </article>
+  
+  <article class="finding">
+    <h3><code>RG-AUTHN-010</code> <span class="sev">medium</span> <span class="badge ec-EXPLOITED">EXPLOITED</span></h3>
+    <p>Username enumeration via POST /api/register (409 &#x27;username taken&#x27;)</p>
+    <dl>
+      <dt>Location</dt><dd><code>POST /api/register</code></dd>
+      <dt>What this means</dt><dd>An attacker can test which usernames exist. Login responses are identical for existing vs missing users (timing not measured here).</dd>
+      <dt>Reproduce</dt><dd>—</dd>
+      <dt>Suggested fix</dt><dd>Generic response or rate-limit/verify by email.</dd>
+      <dt>Reported by</dt><dd>—</dd>
+      <dt>Evidence</dt><dd>evidence/enum/enum.txt, evidence/probes.py</dd>
+    </dl>
+  </article>
+  
+  <article class="finding">
+    <h3><code>RG-DATAEXPO-011</code> <span class="sev">medium</span> <span class="badge ec-EXPLOITED">EXPLOITED</span></h3>
+    <p>Raw database error text returned by /api/search</p>
+    <dl>
+      <dt>Location</dt><dd><code>GET /api/search</code></dd>
+      <dt>What this means</dt><dd>Error text helps an attacker tune SQL injection.</dd>
+      <dt>Reproduce</dt><dd>—</dd>
+      <dt>Suggested fix</dt><dd>Return a generic error and log server-side.</dd>
+      <dt>Reported by</dt><dd>—</dd>
+      <dt>Evidence</dt><dd>evidence/errors/errors.txt</dd>
+    </dl>
+  </article>
+  
+  <article class="finding">
+    <h3><code>RG-PRIVACY-030</code> <span class="sev">medium</span> <span class="badge ec-EXPLOITED">EXPLOITED</span></h3>
+    <p>Email and username sent to the analytics endpoint on every login/signup</p>
+    <dl>
+      <dt>Location</dt><dd><code>app/main.py:79</code></dd>
+      <dt>What this means</dt><dd>Personal data leaves the app to an analytics vendor without consent or need.</dd>
+      <dt>Reproduce</dt><dd>—</dd>
+      <dt>Suggested fix</dt><dd>Drop email/username from events or use pseudonymous ids; add disclosure and consent.</dd>
+      <dt>Reported by</dt><dd>—</dd>
+      <dt>Evidence</dt><dd>evidence/privacy/analytics_events.json</dd>
+    </dl>
+  </article>
+  
+  <article class="finding">
+    <h3><code>RG-SCA-013</code> <span class="sev">medium</span> <span class="badge ec-TOOL-CONFIRMED">TOOL-CONFIRMED</span></h3>
+    <p>python-multipart 0.0.6 has 8 distinct known advisories (pip-audit reports 16 entries); fixed versions up to 0.0.31</p>
+    <dl>
+      <dt>Location</dt><dd><code>requirements.txt:3</code></dd>
+      <dt>What this means</dt><dd>Unauthenticated form endpoints parse input with a vulnerable multipart parser (DoS/parsing issues in the advisories).</dd>
+      <dt>Reproduce</dt><dd>—</dd>
+      <dt>Suggested fix</dt><dd>Upgrade python-multipart to the latest release (&gt;=0.0.31).</dd>
+      <dt>Reported by</dt><dd>pip-audit 2.10.1</dd>
+      <dt>Evidence</dt><dd>evidence/pip-audit-20261018T140409Z/pip-audit.json, evidence/osv-scanner-20261018T140415Z/osv-scanner.json</dd>
+    </dl>
+  </article>
+  
+  <article class="finding">
+    <h3><code>RG-HEADERS-012</code> <span class="sev">low</span> <span class="badge ec-EXPLOITED">EXPLOITED</span></h3>
+    <p>No security headers on responses (no X-Content-Type-Options, frame protection, CSP)</p>
+    <dl>
+      <dt>Location</dt><dd><code>—</code></dd>
+      <dt>What this means</dt><dd>Weak browser-side defence-in-depth; app is a JSON API.</dd>
+      <dt>Reproduce</dt><dd>—</dd>
+      <dt>Suggested fix</dt><dd>Add headers via middleware.</dd>
+      <dt>Reported by</dt><dd>—</dd>
+      <dt>Evidence</dt><dd>evidence/headers/headers.txt</dd>
+    </dl>
+  </article>
+  
+  <article class="finding">
+    <h3><code>RG-SECRETS-005</code> <span class="sev">low</span> <span class="badge ec-TOOL-CONFIRMED">TOOL-CONFIRMED</span></h3>
+    <p>Hardcoded payment and cloud credential strings in app/config.py (values look like fixtures/placeholders)</p>
+    <dl>
+      <dt>Location</dt><dd><code>app/config.py:11</code></dd>
+      <dt>What this means</dt><dd>If real keys are ever pasted here they ship in the repo; config pattern invites committing secrets.</dd>
+      <dt>Reproduce</dt><dd>—</dd>
+      <dt>Suggested fix</dt><dd>Load from environment variables; rotate if any value was ever real.</dd>
+      <dt>Reported by</dt><dd>gitleaks 8.30.1, rule stripe-access-token</dd>
+      <dt>Evidence</dt><dd>evidence/gitleaks-20261018T140401Z/gitleaks.json, evidence/bandit-20261018T140409Z/bandit.json</dd>
+    </dl>
+  </article>
+  
+</section>
+
+<section id="not-tested">
+  <h2>4. NOT-TESTED</h2>
+  <p class="muted">Checks that applied to this product and were not run, with the exact reason. None of these is a pass.</p>
+  <div class="tablewrap">
+  <table>
+    <thead>
+      <tr><th>Check</th><th>Evidence class</th><th>Reason</th></tr>
+    </thead>
+    <tbody>
+    
+      <tr>
+        <td><code>SEC-SECRETS-VERIFIED</code> Live-secret verification (trufflehog --results=verified)</td>
+        <td><span class="badge ec-NOT-TESTED">NOT-TESTED</span></td>
+        <td>live verification not authorised (third-party contact)</td>
+      </tr>
+    
+      <tr>
+        <td><code>SEC-SECRETS-ARTIFACTS</code> Secrets in client bundles, build artifacts and images</td>
+        <td><span class="badge ec-NOT-TESTED">NOT-TESTED</span></td>
+        <td>no build artifacts present</td>
+      </tr>
+    
+      <tr>
+        <td><code>SEC-IAC</code> IaC and container configuration (trivy config, hadolint, checkov)</td>
+        <td><span class="badge ec-NOT-TESTED">NOT-TESTED</span></td>
+        <td>no IaC or container files present</td>
+      </tr>
+    
+      <tr>
+        <td><code>SEC-SESSION</code> Session cookie flags, invalidation on logout / password change</td>
+        <td><span class="badge ec-NOT-TESTED">NOT-TESTED</span></td>
+        <td>no logout or password-change endpoint exists to test token invalidation; tokens are in-memory bearer tokens with no expiry (code: app/main.py:25,72)</td>
+      </tr>
+    
+      <tr>
+        <td><code>SEC-UPLOADS</code> File upload validation, limits, served content-type</td>
+        <td><span class="badge ec-NOT-TESTED">NOT-TESTED</span></td>
+        <td>no result recorded</td>
+      </tr>
+    
+      <tr>
+        <td><code>SEC-DAST-SCAN</code> ZAP baseline/API scan and nuclei safe templates</td>
+        <td><span class="badge ec-NOT-TESTED">NOT-TESTED</span></td>
+        <td>nuclei run did not finish in this run; ZAP not run</td>
+      </tr>
+    
+      <tr>
+        <td><code>COR-TEST-SUITE</code> Existing test suite pass/fail and coverage</td>
+        <td><span class="badge ec-NOT-TESTED">NOT-TESTED</span></td>
+        <td>project has no tests</td>
+      </tr>
+    
+      <tr>
+        <td><code>COR-FUZZ</code> Property-based tests / fuzzing of parsers and input handlers</td>
+        <td><span class="badge ec-NOT-TESTED">NOT-TESTED</span></td>
+        <td>not run in this pass</td>
+      </tr>
+    
+      <tr>
+        <td><code>COR-RACE</code> Race conditions on operations that must be atomic</td>
+        <td><span class="badge ec-NOT-TESTED">NOT-TESTED</span></td>
+        <td>not run in this pass</td>
+      </tr>
+    
+      <tr>
+        <td><code>PERF-LOAD-PROFILES</code> Baseline / load / stress / spike / soak profiles</td>
+        <td><span class="badge ec-NOT-TESTED">NOT-TESTED</span></td>
+        <td>not run in this pass; traffic expectations are assumed defaults</td>
+      </tr>
+    
+      <tr>
+        <td><code>PERF-FAILURE-MODES</code> Behaviour with DB down, third-party timeout, disk full</td>
+        <td><span class="badge ec-NOT-TESTED">NOT-TESTED</span></td>
+        <td>not run in this pass</td>
+      </tr>
+    
+      <tr>
+        <td><code>OPS-BACKUP-RESTORE</code> Backup restored into scratch environment and verified</td>
+        <td><span class="badge ec-NOT-TESTED">NOT-TESTED</span></td>
+        <td>database is in-memory and re-seeded at boot; no backup mechanism exists to test</td>
+      </tr>
+    
+      <tr>
+        <td><code>OPS-DEPLOY-CONFIG</code> Prod debug off, secrets from env, rollback + reversible migrations</td>
+        <td><span class="badge ec-NOT-TESTED">NOT-TESTED</span></td>
+        <td>no deploy config present</td>
+      </tr>
+    
+      <tr>
+        <td><code>PRIV-REGIME-MAPPING</code> Applicable privacy regimes mapped and obligations evaluated</td>
+        <td><span class="badge ec-NOT-TESTED">NOT-TESTED</span></td>
+        <td>not performed in this pass; operator, regions and jurisdiction are assumptions</td>
+      </tr>
+    
+      <tr>
+        <td><code>LEGAL-DOCS-GENERATED</code> Applicable legal document drafts generated</td>
+        <td><span class="badge ec-NOT-TESTED">NOT-TESTED</span></td>
+        <td>legal documents not generated in this pass</td>
+      </tr>
+    
+      <tr>
+        <td><code>SUP-LICENSES</code> Dependency and asset license compatibility</td>
+        <td><span class="badge ec-NOT-TESTED">NOT-TESTED</span></td>
+        <td>licenses not evaluated in this pass</td>
+      </tr>
+    
+    
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section id="limitations">
+  <h2>5. Limitations</h2>
+  <ul>
+  
+    <li>This is not a substitute for a professional penetration test or for a lawyer.</li>
+  
+    <li>Automated scanning misses business-logic flaws; the manual-review items are only as good as the code paths that were read.</li>
+  
+    <li>Load tests on local hardware do not predict production capacity exactly.</li>
+  
+    <li>A scanner that reports nothing has only shown that this scanner, with its rules and scope, found nothing.</li>
+  
+    <li>Automated accessibility tools catch only part of WCAG issues; manual checks are still needed.</li>
+  
+    <li>Legal documents are drafts generated from the data inventory, not legal advice.</li>
+  
+  </ul>
+</section>
+
+<section id="disclaimer" class="disclaimer">
+  <h2>Disclaimer</h2>
+  <p>This report was generated by release-gate, an automated tool, and is provided as is, without warranty of any kind. It is not legal advice, not a penetration test, and not a certification of compliance. A SHIP verdict does not guarantee the absence of vulnerabilities, bugs or legal risk; it states only what was checked and how, as listed in the coverage matrix. The decision to release, and responsibility for it, remain with the publisher. See DISCLAIMER.md in the release-gate repository.</p>
+</section>
+
+</main>
+</body>
+</html>

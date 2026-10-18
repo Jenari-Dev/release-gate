@@ -83,6 +83,9 @@ run_tool.py --project P --tool hadolint --test-type scan -- -f json <Dockerfile>
 run_tool.py --project P --tool checkov  --test-type scan -- -d {project} -o json --output-file-path {evidence}
 run_tool.py --project P --tool trivy    --test-type scan -- config --skip-db-update --format json -o {evidence}/trivy-config.json {project}
 ```
+
+checkov's `github_actions` framework only recognises workflows under `.github/workflows/`; a workflow anywhere else is scanned as 0 resources and reads as an empty pass. Check the resource count in its output: 0 resources for a file you expected it to scan = `NOT-TESTED: checkov scanned 0 resources`, never `VERIFIED-ABSENT`.
+
 Run only those whose inputs exist (Dockerfile, k8s/terraform/compose). No IaC files present: check is not applicable; record `NOT-TESTED: no IaC or container files present`.
 
 ### 7. SBOM: SEC-SBOM

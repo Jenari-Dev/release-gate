@@ -46,6 +46,23 @@ NETWORK_CATEGORIES = frozenset({"dast", "load"})
 EXIT_OK, EXIT_USAGE, EXIT_NOT_RUN, EXIT_REFUSED, EXIT_TIMEOUT, EXIT_ERROR = 0, 2, 4, 5, 6, 7
 
 
+# Flags that keep a tool from contacting third parties on its own (principle 5). They are
+# added when missing, never left to the caller: nuclei otherwise registers with a public
+# Interactsh server (oast.*) for out-of-band checks, and checks for template/engine updates.
+FORCED_FLAGS: dict[str, list[tuple[str, ...]]] = {
+    "nuclei": [("-ni", "-no-interactsh"), ("-duc", "-disable-update-check")],
+}
+
+
+def force_offline_flags(tool: str, args: list[str]) -> tuple[list[str], list[str]]:
+    """Return (args with any missing forced flags appended, the flags that were added)."""
+    added = []
+    for aliases in FORCED_FLAGS.get(tool, []):
+        if not any(a in args for a in aliases):
+            added.append(aliases[0])
+    return [*args, *added], added
+
+
 def substitute(args: list[str], project: str, evidence: str) -> list[str]:
     """Replace {project} and {evidence} placeholders (plain replace: other braces stay)."""
     return [a.replace("{project}", project).replace("{evidence}", evidence) for a in args]
@@ -171,6 +188,9 @@ def run(args: argparse.Namespace, tool_args: list[str]) -> int:
     version = None
     if local is not None:
         version = check_tools.check_tool(args.tool, lock).get("found_version")
+    tool_args, forced = force_offline_flags(args.tool, tool_args)
+    if forced:
+        base["forced_flags"] = forced
     docker_name = None
     docker_exe = None
     if use_docker:

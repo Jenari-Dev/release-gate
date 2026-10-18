@@ -312,3 +312,13 @@ def test_is_installed_presence_kind(tmp_path):
     (tmp_path / "share" / "zap").mkdir(parents=True)
     (tmp_path / "share" / "zap" / "marker").write_text("x")
     assert it.is_installed("zap", lock["tools"]["zap"], lock) is True
+
+
+@pytest.mark.parametrize("bad", ["..", "../x", "/etc", "a/../../b", ".", ""])
+def test_install_root_rejects_escapes(tmp_path, bad):
+    with pytest.raises(it.InstallError):
+        it._install_root(tmp_path, {"install_root": bad}, "t")
+
+
+def test_install_root_accepts_relative(tmp_path):
+    assert it._install_root(tmp_path, {"install_root": "zap"}, "t") == tmp_path / "zap"

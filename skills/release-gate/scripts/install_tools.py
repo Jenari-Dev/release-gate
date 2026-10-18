@@ -216,13 +216,21 @@ def _require(spec: dict, key: str, name: str):
     return spec[key]
 
 
+def _install_root(share: Path, spec: dict, name: str) -> Path:
+    """share/<install_root>, refusing absolute or '..' values (rmtree runs on this path)."""
+    rel = str(_require(spec, "install_root", name))
+    if not rel or rel in (".", "./") or PurePosixPath(rel).is_absolute() or ".." in PurePosixPath(rel).parts:
+        raise InstallError(f"{name}: unsafe install_root {rel!r}")
+    return share / rel
+
+
 def install_archive_dir(name: str, spec: dict, share: Path, workdir: Path | None = None) -> Path:
     """Download a .tar.gz, verify its sha256, then extract the whole tree with the
     stdlib 'data' filter (rejects absolute paths, '..', and unsafe links) into
     share_dir/<install_root>. Only tar archives are accepted here."""
     source = _require(spec, "source", name)
     expected = _require(spec, "sha256", name)
-    root = share / _require(spec, "install_root", name)
+    root = _install_root(share, spec, name)
     with tempfile.TemporaryDirectory(prefix=f"rg-{name}-", dir=workdir) as tmp:
         tmpdir = Path(tmp)
         asset = tmpdir / source.rsplit("/", 1)[-1]
@@ -265,7 +273,7 @@ def install_git(name: str, spec: dict, share: Path) -> Path:
         raise InstallError(f"{name}: commit is not a hex sha: {commit!r}")
     if not source.lower().startswith("https://"):
         raise InstallError(f"{name}: refusing non-https git source: {source}")
-    root = share / _require(spec, "install_root", name)
+    root = _install_root(share, spec, name)
     if root.exists():
         shutil.rmtree(root)
     root.parent.mkdir(parents=True, exist_ok=True)
@@ -288,7 +296,7 @@ def install_npm(name: str, spec: dict, share: Path) -> Path:
     package = spec.get("package", name)
     if not re.fullmatch(r"[A-Za-z0-9@][A-Za-z0-9._/@-]*", package) or not re.fullmatch(r"\d[\w.+!-]*", version):
         raise InstallError(f"{name}: invalid package/version in lock")
-    root = share / _require(spec, "install_root", name)
+    root = _install_root(share, spec, name)
     root.mkdir(parents=True, exist_ok=True)
     if not (root / "package.json").exists():
         run(["npm", "init", "-y"], cwd=str(root))

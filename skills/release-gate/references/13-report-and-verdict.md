@@ -73,7 +73,7 @@ Appendix A lists findings judged false positives with reasons.
 | quick | secrets, SAST, SCA, tests, policy check | capped at SHIP WITH ACCEPTED RISKS at best |
 | full | all | BLOCK / SHIP WITH ACCEPTED RISKS / SHIP |
 | legal | 1, 7, 8 | NOT-EVALUATED |
-| retest | prior findings with a recorded repro | capped; trend shows fixed vs regressed (full retest/quick/ci playbooks arrive in a later release-gate version) |
+| retest | prior findings with a recorded repro | capped; trend shows fixed vs regressed (playbook: `references/modes/retest.md`) |
 
 ## NOT-TESTED strings (exact)
 - `no result recorded` (shown automatically for a check no phase wrote; fix by running or explicitly recording the phase)

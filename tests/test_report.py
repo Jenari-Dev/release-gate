@@ -308,6 +308,8 @@ def test_redact_value_keeps_four_chars():
     ("https://api.stripe.com", "scan", False),
     ("https://prod.example.com", "stress", False),
     ("https://prod.example.com", "scan", True),
+    ("ftp://127.0.0.1:3000/x", "authz", False),
+    ("file://127.0.0.1:3000/etc/passwd", "authz", False),
 ])
 def test_check_scope(url, test, ok):
     scope = {"targets": [
@@ -320,3 +322,30 @@ def test_check_scope(url, test, ok):
 
 def test_check_scope_fails_closed_without_scope():
     assert rglib.check_scope("http://127.0.0.1:3000", "scan", None) == (False, "no confirmed scope (.release-gate/scope.yaml missing or empty)")
+
+
+# ---- host identity: proofs may only read planted canaries (phase 03) -------------------------
+
+IDENT = {"hostname": "devbox-7731", "home path": "/home/someuser"}
+
+
+def test_host_identity_flags_hostname_and_home_in_reports():
+    assert rl.lint_host_identity("r.md", "fetched: devbox-7731\n", IDENT)
+    assert rl.lint_host_identity("r.md", "path /home/someuser/.ssh/id_rsa", IDENT)
+    assert not rl.lint_host_identity("r.md", "devbox-77310 and xdevbox-7731 are different words", IDENT)
+
+
+def test_host_identity_in_evidence_ignores_project_paths_but_flags_host_files(tmp_path):
+    ev = tmp_path / "evidence" / "dyn"
+    ev.mkdir(parents=True)
+    (ev / "semgrep.sarif").write_text('{"uri": "/home/someuser/proj/app.py"}')
+    assert rl.lint_evidence(tmp_path, IDENT) == []
+    (ev / "ssrf.out").write_text("root:x:0:0:root:/root:/bin/bash\n")
+    (ev / "ssrf2.out").write_text("HTTP/1.1 200\n\ndevbox-7731\n")
+    probs = rl.lint_evidence(tmp_path, IDENT)
+    assert any("passwd" in p for p in probs) and any("hostname" in p for p in probs)
+
+
+def test_host_identity_skips_short_or_localhost(monkeypatch):
+    monkeypatch.setattr(rl.socket, "gethostname", lambda: "localhost")
+    assert "hostname" not in rl.host_identity()

@@ -2,7 +2,13 @@
 
 `report.html.tmpl` is a self-contained HTML report skeleton for release-gate: inline CSS only, no scripts, no web fonts, no images, no network requests. It follows `prefers-color-scheme` for light and dark and has print rules (Ctrl+P gives a clean PDF).
 
-The template matches the data `scripts/report_build.py` already builds in `build_context()`. `report_build.py` does not read this file today; it renders its own HTML from the Markdown report. Use the template when you want to hand-build a report, restyle the output, or feed another renderer.
+The template matches the data `scripts/report_build.py` already builds in `build_context()`. `report_build.py` itself still renders its own HTML from the Markdown report; `scripts/render_report.py` is the renderer for this template. It implements exactly the syntax and mapping below, escapes every value, redacts secrets, refuses unknown `evidence_class` / `verdict_class` values, strips author comments and raises `ValueError` if any `{{...}}` is left unfilled:
+
+```
+python scripts/render_report.py --project . [--mode full] [--date 2026-10-18] [--out report.html]
+```
+
+By default it writes `<project>/.release-gate/reports/release-gate-<date>.template.html`, runs `report_lint` on it and prints the path. If lint fails it renames the file to `*.lint-failed.html` and exits 2. From Python, `render_report.render(ctx)` takes the dict from `report_build.build_context()` and returns the HTML. To restyle the report, edit the template; the renderer reads it on every run.
 
 ## Placeholder syntax
 
